@@ -69,7 +69,7 @@
     // Handle Deletion
     if (data.action === "delete") {
       currentProject.regions = currentProject.regions.filter(
-        (r) => r.id !== data.id
+        (r) => r.id !== data.id,
       );
       console.log("Deleted region", data.id);
       return;
@@ -221,20 +221,51 @@
     </div>
 
     <div
-      class="flex gap-4 p-4 bg-gray-900 rounded-lg justify-center border border-gray-700"
+      class="flex gap-4 p-4 bg-gray-900 rounded-lg items-center border border-gray-700"
     >
       <button
         class="bg-gray-700 px-6 py-2 rounded hover:bg-gray-600 font-medium"
         onclick={() => waveformComponent?.playPause()}
       >
-        Play / Pause (Space)
+        Play / Pause
       </button>
       <button
         class="bg-purple-600 px-6 py-2 rounded hover:bg-purple-700 font-medium"
         onclick={handleAddChord}
       >
-        Add Chord (M)
+        Add Chord
       </button>
+
+      <div class="h-8 w-px bg-gray-700 mx-2"></div>
+
+      <div class="flex flex-col">
+        <span class="text-[10px] uppercase text-gray-500 font-bold"
+          >Synth Vol</span
+        >
+        <input
+          type="range"
+          min="-40"
+          max="0"
+          value="-10"
+          oninput={(e) =>
+            waveformComponent?.setSynthVolume(Number(e.currentTarget.value))}
+          class="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer mt-2"
+        />
+      </div>
+
+      <div class="flex flex-col">
+        <span class="text-[10px] uppercase text-gray-500 font-bold">Sound</span>
+        <select
+          class="bg-gray-800 text-xs text-white p-1 rounded border border-gray-600 mt-1 outline-none focus:border-blue-500"
+          onchange={(e) =>
+            waveformComponent?.setOscillator(e.currentTarget.value)}
+        >
+          <option value="triangle">Triangle (Soft)</option>
+          <option value="sine">Sine (Pure)</option>
+          <option value="square">Square (Retro)</option>
+          <option value="sawtooth">Sawtooth (Sharp)</option>
+        </select>
+      </div>
     </div>
     <div class="flex items-center gap-2 mt-4">
       <span class="text-xs text-gray-400">Synth Vol</span>

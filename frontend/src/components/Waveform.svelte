@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, untrack, tick } from "svelte";
+  import { onMount, tick } from "svelte";
   import WaveSurfer from "wavesurfer.js";
   import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
   import type { Region } from "wavesurfer.js/dist/plugins/regions.esm.js";
@@ -15,7 +15,7 @@
     audioUrl?: string;
     regionsData?: ChordRegion[];
     onRegionChange?: (
-      event: RegionChangeEvent | { action: "delete"; id: string }
+      event: RegionChangeEvent | { action: "delete"; id: string },
     ) => void;
   }>();
 
@@ -24,27 +24,31 @@
   let wsRegions = $state<RegionsPlugin | undefined>(undefined);
   let container = $state<HTMLElement | undefined>(undefined);
 
+  // FIX: Track if audio is actually ready to accept regions
+  let isReady = $state(false);
+
   let selectedRegionId = $state<string | null>(null);
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
-    null
+    null,
   );
 
-  let player = new ChordPlayer(); // <--- Initialize Player
-  let lastTime = 0; // Track time to detect crossings
+  let player = new ChordPlayer();
+  let lastTime = 0;
 
-  // Editing State
+  // Edit State
   let isEditing = $state(false);
   let editValue = $state("");
   let editId = $state<string | null>(null);
   let editInputRef = $state<HTMLInputElement | undefined>(undefined);
 
-  // Constants
   const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
   const COLOR_SELECTED = "rgba(239, 68, 68, 0.4)";
+  const MIN_DURATION = 0.1;
 
-  // --- Initialization ---
-  $effect(() => {
-    if (!container || untrack(() => wavesurfer)) return;
+  // --- Lifecycle ---
+
+  onMount(() => {
+    if (!container) return;
 
     const ws = WaveSurfer.create({
       container: container,
@@ -57,34 +61,66 @@
 
     const regions = ws.registerPlugin(RegionsPlugin.create());
 
-    // 1. Update/Drag
-    // Inside the $effect block:
-    regions.on("region-double-clicked", (region: Region, e: MouseEvent) => {
-      e.stopPropagation();
-      startEditing(region.id); // No longer passing region.content
+    // --- Events ---
+
+    // 1. Wait for decode before allowing regions to render
+    ws.on("decode", () => {
+      console.log("Audio decoded. Ready to render.");
+      isReady = true; // This triggers the effect to draw regions
     });
 
-    // 2. Click (Select)
-    regions.on("region-clicked", (region: Region, e: MouseEvent) => {
+    // 2. Audio Processing
+    ws.on("audioprocess", (currentTime) => {
+      if (!ws.isPlaying()) return;
+
+      const activeRegions = regions.getRegions().filter((r) => {
+        return r.start >= lastTime && r.start <= currentTime;
+      });
+
+      activeRegions.forEach((r) => {
+        const cleanData = regionsData.find((d) => d.id === r.id);
+        if (cleanData) {
+          const duration = r.end - r.start;
+          // Safeguard: strictly ignore micro-regions (remnants of the clamping bug)
+          if (duration < 0.05) return;
+          player.playChord(cleanData.chord_symbol, duration);
+        }
+      });
+      lastTime = currentTime;
+    });
+
+    ws.on("play", () => player.ensureReady());
+    ws.on("pause", () => player.stopAll());
+    ws.on("seeking", (t) => {
+      lastTime = t;
+      player.stopAll();
+    });
+
+    regions.on("region-updated", (region) => {
+      avoidOverlap(region, regions);
+      if (onRegionChange) {
+        onRegionChange({
+          id: region.id,
+          start: region.start,
+          end: region.end,
+          content: region.content as string,
+        });
+      }
+    });
+
+    regions.on("region-clicked", (region, e) => {
       e.stopPropagation();
       selectRegion(region.id);
     });
 
-    // 3. Double Click (Edit)
-    regions.on("region-double-clicked", (region: Region, e: MouseEvent) => {
+    regions.on("region-double-clicked", (region, e) => {
       e.stopPropagation();
-      startEditing(region.id, region.content as string);
+      startEditing(region.id);
     });
 
-    // 4. Background Click
-    ws.on("click", () => {
-      selectRegion(null);
-    });
-
-    // 5. Context Menu Binding (Right Click)
     regions.on("region-created", (region) => {
       if (region.element) {
-        region.element.addEventListener("contextmenu", (e: MouseEvent) => {
+        region.element.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           e.stopPropagation();
           selectRegion(region.id);
@@ -93,84 +129,65 @@
       }
     });
 
-    // --- AUDIO SYNC LOGIC ---
-    ws.on("audioprocess", (currentTime) => {
-      if (!ws.isPlaying()) return;
-
-      // Find regions that started between the last frame and now
-      // We look at our PROPS (regionsData) because that is the source of truth,
-      // though looking at wsRegions is also fine.
-      // Let's use the local 'wsRegions' plugin instance for speed.
-
-      const activeRegions = wsRegions!.getRegions().filter((r) => {
-        // Check if this region's start time was crossed just now
-        return r.start >= lastTime && r.start <= currentTime;
-      });
-
-      activeRegions.forEach((r) => {
-        // FIX: Don't read r.content. Look up the clean data using ID.
-        const cleanData = regionsData.find((d) => d.id === r.id);
-
-        if (cleanData) {
-          const chordName = cleanData.chord_symbol;
-          const duration = r.end - r.start;
-
-          // console.log(`Triggering ${chordName}`);
-          player.playChord(chordName, duration);
-        }
-      });
-
-      lastTime = currentTime;
-    });
-
-    // Handle Seeking (scrubbing): Reset lastTime so we don't trigger a backlog of chords
-    ws.on("seeking", (currentTime) => {
-      lastTime = currentTime;
-      player.stopAll(); // Stop any lingering sound if we jump
-    });
-
-    // Handle Play: Ensure AudioContext is ready
-    ws.on("play", () => {
-      player.ensureReady();
-    });
+    ws.on("click", () => selectRegion(null));
 
     wavesurfer = ws;
     wsRegions = regions;
 
     return () => {
-      try {
-        ws.destroy();
-      } catch (e) {}
+      player.stopAll();
+      ws.destroy();
     };
   });
 
-  // --- Reactivity: Audio ---
-  $effect(() => {
-    if (wavesurfer && audioUrl) wavesurfer.load(audioUrl);
-  });
+  // --- Reactivity ---
 
-  // --- Reactivity: Regions ---
+  // Load Audio
   $effect(() => {
-    if (wsRegions && regionsData) {
-      // Only clear if we aren't currently editing to prevent UI flicker
-      if (isEditing) return;
-
-      wsRegions.clearRegions();
-      regionsData.forEach((r) => {
-        wsRegions!.addRegion({
-          id: r.id,
-          start: r.start,
-          end: r.end,
-          content: r.chord_symbol,
-          color: r.id === selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
-          drag: true,
-          resize: true,
-        });
+    if (wavesurfer && audioUrl) {
+      // Reset ready state when loading new audio
+      isReady = false;
+      wavesurfer.load(audioUrl).catch((err) => {
+        if (err.name !== "AbortError") console.error(err);
       });
     }
   });
 
-  // --- Helpers ---
+  // Sync Regions
+  $effect(() => {
+    // FIX: Only render if wsRegions exists AND audio isReady
+    if (wsRegions && regionsData && isReady && !isEditing) {
+      const visualCount = wsRegions.getRegions().length;
+      // Force sync if counts mismatch or empty
+      if (visualCount !== regionsData.length || visualCount === 0) {
+        renderVisualRegions();
+      }
+    }
+  });
+
+  function renderVisualRegions() {
+    if (!wsRegions || !regionsData) return;
+
+    console.log(`Rendering ${regionsData.length} regions...`);
+    wsRegions.clearRegions();
+
+    regionsData.forEach((r) => {
+      // Double check we aren't rendering corrupt data
+      if (r.end - r.start < MIN_DURATION) return;
+
+      wsRegions!.addRegion({
+        id: r.id,
+        start: r.start,
+        end: r.end,
+        content: r.chord_symbol,
+        color: r.id === selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
+        drag: true,
+        resize: true,
+      });
+    });
+  }
+
+  // --- Helpers (Same as before) ---
 
   function selectRegion(id: string | null) {
     selectedRegionId = id;
@@ -181,37 +198,40 @@
     });
   }
 
-  function avoidOverlap(activeRegion: Region) {
-    if (!wsRegions) return;
-    const regions = wsRegions.getRegions().sort((a, b) => a.start - b.start);
+  function avoidOverlap(activeRegion: Region, regionsPlugin: RegionsPlugin) {
+    const regions = regionsPlugin
+      .getRegions()
+      .sort((a, b) => a.start - b.start);
     const index = regions.findIndex((r) => r.id === activeRegion.id);
     if (index === -1) return;
 
     const prev = regions[index - 1];
     const next = regions[index + 1];
 
-    if (prev && activeRegion.start < prev.end) activeRegion.start = prev.end;
-    if (next && activeRegion.end > next.start) activeRegion.end = next.start;
-  }
-
-  // --- Editing Logic ---
-
-  // Find the 'startEditing' function and replace it with this:
-  async function startEditing(id: string) {
-    // FIX: Look up the clean chord name from our source of truth (regionsData),
-    // instead of trusting the WaveSurfer region object which might be an HTML element.
-    const sourceData = regionsData.find((r) => r.id === id);
-
-    if (!sourceData) {
-      console.error("Could not find region data for id:", id);
-      return;
+    if (prev && activeRegion.start < prev.end) {
+      activeRegion.start = prev.end;
+      if (activeRegion.end - activeRegion.start < MIN_DURATION) {
+        activeRegion.end = activeRegion.start + MIN_DURATION;
+      }
     }
 
+    if (next && activeRegion.end > next.start) {
+      activeRegion.end = next.start;
+      if (activeRegion.end - activeRegion.start < MIN_DURATION) {
+        activeRegion.start = activeRegion.end - MIN_DURATION;
+      }
+    }
+  }
+
+  // --- Editing (Same as before) ---
+
+  async function startEditing(id: string) {
+    const sourceData = regionsData.find((r) => r.id === id);
+    if (!sourceData) return;
     editId = id;
-    editValue = sourceData.chord_symbol; // This is guaranteed to be the string "Cm7" etc.
+    editValue = sourceData.chord_symbol;
     isEditing = true;
     contextMenu = null;
-
     await tick();
     editInputRef?.focus();
     editInputRef?.select();
@@ -219,13 +239,9 @@
 
   function saveEdit() {
     if (!editId || !wsRegions) return;
-
     const region = wsRegions.getRegions().find((r) => r.id === editId);
     if (region) {
-      // 1. Update Visuals
       region.setOptions({ content: editValue });
-
-      // 2. Notify Parent
       if (onRegionChange) {
         onRegionChange({
           id: region.id,
@@ -243,41 +259,96 @@
     editId = null;
   }
 
+  function deleteRegion(id: string) {
+    if (onRegionChange) onRegionChange({ action: "delete", id: id });
+    selectRegion(null);
+  }
+
+  // --- Global Inputs (Same as before) ---
+
   function handleKeyDown(e: KeyboardEvent) {
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    ) {
+      if (!isEditing) return;
+    }
+
     if (isEditing) {
       if (e.key === "Enter") saveEdit();
       if (e.key === "Escape") closeEdit();
-      e.stopPropagation(); // Prevent global delete from firing
+      e.stopPropagation();
+      return;
+    }
+
+    const SHIFT_JUMP = 5.0;
+    const NORMAL_JUMP = 0.5;
+    const jumpAmount = e.shiftKey ? SHIFT_JUMP : NORMAL_JUMP;
+
+    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
+      if (wavesurfer) {
+        if (e.key === "ArrowLeft") e.preventDefault();
+        const time = Math.max(0, wavesurfer.getCurrentTime() - jumpAmount);
+        wavesurfer.setTime(time);
+      }
+    }
+
+    if (e.key === "ArrowRight" || e.key.toLowerCase() === "l") {
+      if (wavesurfer) {
+        if (e.key === "ArrowRight") e.preventDefault();
+        const time = Math.min(
+          wavesurfer.getDuration(),
+          wavesurfer.getCurrentTime() + jumpAmount,
+        );
+        wavesurfer.setTime(time);
+      }
+    }
+
+    if (e.code === "Space") {
+      e.preventDefault();
+      wavesurfer?.playPause();
+      return;
+    }
+
+    if (e.code === "KeyM") {
+      addRegionAtCurrentTime("C");
       return;
     }
 
     if (selectedRegionId) {
       if (e.key === "Delete" || e.key === "Backspace")
         deleteRegion(selectedRegionId);
-      if (e.key === "Enter") {
-        startEditing(selectedRegionId);
-      }
+      if (e.key === "Enter") startEditing(selectedRegionId);
     }
   }
 
-  // --- Public Methods ---
+  // --- Exports (Same as before) ---
+
   export function playPause() {
     wavesurfer?.playPause();
   }
+  export function setSynthVolume(val: number) {
+    player.setVolume(val);
+  }
+  export function setOscillator(type: any) {
+    player.setOscillatorType(type);
+  }
 
   export function addRegionAtCurrentTime(chordName: string) {
-    // (Keep existing addRegion logic same as previous step...)
-    // For brevity in this snippet, ensure you paste the "Overlap Check" version here
     if (!wavesurfer || !wsRegions) return;
+
+    if (regionsData.length > 0 && wsRegions.getRegions().length === 0) {
+      renderVisualRegions();
+    }
+
     const currentTime = wavesurfer.getCurrentTime();
     const regions = wsRegions.getRegions().sort((a, b) => a.start - b.start);
 
     const inside = regions.find(
-      (r) => currentTime >= r.start && currentTime < r.end - 0.01
+      (r) => currentTime >= r.start && currentTime < r.end - 0.01,
     );
     if (inside) {
       selectRegion(inside.id);
-      console.warn("Inside existing chord");
       return;
     }
 
@@ -285,7 +356,7 @@
     const nextRegion = regions.find((r) => r.start > currentTime);
     if (nextRegion) {
       const gap = nextRegion.start - currentTime;
-      if (gap < 0.1) return;
+      if (gap < MIN_DURATION) return;
       duration = Math.min(duration, gap);
     }
 
@@ -307,15 +378,6 @@
         content: chordName,
       });
     }
-  }
-
-  export function setSynthVolume(val: number) {
-    player.setVolume(val);
-  }
-
-  function deleteRegion(id: string) {
-    if (onRegionChange) onRegionChange({ action: "delete", id: id });
-    selectRegion(null);
   }
 </script>
 
@@ -361,16 +423,12 @@
         class="px-4 py-2 hover:bg-gray-700 text-left text-white"
         onclick={() => {
           if (contextMenu) startEditing(contextMenu.regionId);
-        }}
+        }}>Edit Chord</button
       >
-        Edit Chord
-      </button>
       <button
         class="px-4 py-2 hover:bg-red-900/50 text-left text-red-300"
-        onclick={() => deleteRegion(contextMenu!.regionId)}
+        onclick={() => deleteRegion(contextMenu!.regionId)}>Delete</button
       >
-        Delete
-      </button>
     </div>
     <div
       class="fixed inset-0 z-40"

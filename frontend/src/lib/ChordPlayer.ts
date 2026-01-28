@@ -6,9 +6,8 @@ export class ChordPlayer {
   private isReady: boolean = false;
 
   constructor() {
-    // Create a polyphonic synth (can play multiple notes at once)
     this.synth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: "triangle" }, // "triangle" sounds softer/nicer than default "square"
+      oscillator: { type: "triangle" }, // Default
       envelope: {
         attack: 0.05,
         decay: 0.1,
@@ -16,11 +15,8 @@ export class ChordPlayer {
         release: 1,
       },
     }).toDestination();
-
-    // Lower the volume a bit so it doesn't overpower the music
     this.synth.volume.value = -10;
   }
-
   async ensureReady() {
     if (!this.isReady) {
       await Tone.start(); // Browsers require a user gesture to start AudioContext
@@ -60,5 +56,10 @@ export class ChordPlayer {
 
   setVolume(db: number) {
     this.synth.volume.rampTo(db, 0.1);
+  }
+
+  // NEW: Allow changing sound type (sine, square, triangle, sawtooth)
+  setOscillatorType(type: "triangle" | "sine" | "square" | "sawtooth") {
+    this.synth.set({ oscillator: { type } });
   }
 }
