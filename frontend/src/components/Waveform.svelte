@@ -236,29 +236,35 @@
 
   // --- AI Logic ---
 
-  export async function askAiForChord() {
+  export async function askAiForChord(settings?: {
+    onset: number;
+    frame: number;
+    minNoteLen: number;
+  }) {
     if (!wavesurfer || !audioUrl) return;
 
     const currentTime = wavesurfer.getCurrentTime();
     const filename = audioUrl.split("/").pop();
     if (!filename) return;
 
+    // BUILD QUERY STRING
+    let query = `filename=${filename}&time=${currentTime}`;
+    if (settings) {
+      query += `&onset=${settings.onset}&frame=${settings.frame}&min_note_len=${settings.minNoteLen}`;
+    }
+
     try {
       const res = await fetch(
-        `http://127.0.0.1:5000/api/identify_chord?filename=${filename}&time=${currentTime}`,
+        `http://127.0.0.1:5000/api/identify_chord?${query}`,
       );
       const data = await res.json();
 
+      // ... rest of the function remains identical ...
       if (data.notes && data.notes.length > 0) {
-        // Brain: Interpret Notes
         const potentialChords = Chord.detect(data.notes);
-        const name = potentialChords.length > 0 ? potentialChords[0] : "?";
-
-        // Display: Show Popup
-        aiResult = {
-          notes: data.notes,
-          name: name,
-        };
+        const name =
+          potentialChords.length > 0 ? potentialChords[0] : "Unknown Shape";
+        aiResult = { notes: data.notes, name: name };
       } else {
         aiResult = { notes: [], name: "Silence / No Chord" };
       }

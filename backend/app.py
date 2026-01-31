@@ -209,7 +209,6 @@ def get_chord_at_time():
     note_names = []
     for midi_num in active_notes:
         idx = midi_num % 12
-        octave = (midi_num // 12) - 1
-        note_names.append(f"{PITCH_NAMES[idx]}{octave}")
+        note_names.append(PITCH_NAMES[idx])
 
     return jsonify({"notes": note_names, "status": "success"})

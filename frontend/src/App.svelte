@@ -25,11 +25,10 @@
 
   async function handleAiClick() {
     if (!waveformComponent) return;
-
     isAiLoading = true;
     try {
-      // We await the child's function
-      await waveformComponent.askAiForChord();
+      // Pass the settings from state
+      await waveformComponent.askAiForChord(aiSettings);
     } finally {
       isAiLoading = false;
     }
@@ -287,7 +286,7 @@
         onclick={() => (showAiSettings = !showAiSettings)}
         title="AI Settings"
       >
-        AI Settings
+        ⚙️
       </button>
 
       {#if showAiSettings}
