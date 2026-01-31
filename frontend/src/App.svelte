@@ -267,7 +267,7 @@
         </select>
       </div>
     </div>
-    <div class="flex items-center gap-2 mt-4">
+    <!-- <div class="flex items-center gap-2 mt-4">
       <span class="text-xs text-gray-400">Synth Vol</span>
       <input
         type="range"
@@ -278,6 +278,6 @@
           waveformComponent?.setSynthVolume(Number(e.currentTarget.value))}
         class="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
       />
-    </div>
+    </div> -->
   {/if}
 </main>

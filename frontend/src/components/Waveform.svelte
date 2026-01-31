@@ -24,8 +24,9 @@
   let wsRegions = $state<RegionsPlugin | undefined>(undefined);
   let container = $state<HTMLElement | undefined>(undefined);
 
-  // FIX: Track if audio is actually ready to accept regions
   let isReady = $state(false);
+  let zoomLevel = $state(50);
+  let isDragging = $state(false);
 
   let selectedRegionId = $state<string | null>(null);
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
@@ -56,23 +57,19 @@
       progressColor: "#3b82f6",
       height: 128,
       normalize: true,
-      minPxPerSec: 50,
+      minPxPerSec: zoomLevel,
     });
 
     const regions = ws.registerPlugin(RegionsPlugin.create());
 
     // --- Events ---
 
-    // 1. Wait for decode before allowing regions to render
     ws.on("decode", () => {
-      console.log("Audio decoded. Ready to render.");
-      isReady = true; // This triggers the effect to draw regions
+      isReady = true;
     });
 
-    // 2. Audio Processing
     ws.on("audioprocess", (currentTime) => {
       if (!ws.isPlaying()) return;
-
       const activeRegions = regions.getRegions().filter((r) => {
         return r.start >= lastTime && r.start <= currentTime;
       });
@@ -81,7 +78,6 @@
         const cleanData = regionsData.find((d) => d.id === r.id);
         if (cleanData) {
           const duration = r.end - r.start;
-          // Safeguard: strictly ignore micro-regions (remnants of the clamping bug)
           if (duration < 0.05) return;
           player.playChord(cleanData.chord_symbol, duration);
         }
@@ -96,20 +92,77 @@
       player.stopAll();
     });
 
+    // --- DRAG / COLLISION LOGIC ---
+
     regions.on("region-updated", (region) => {
-      avoidOverlap(region, regions);
-      if (onRegionChange) {
+      isDragging = true;
+
+      // 1. Get all other regions
+      const others = regions.getRegions().filter((r) => r.id !== region.id);
+
+      let modified = false;
+
+      // 2. Check collision against EVERY other region
+      for (const other of others) {
+        // Check for Overlap
+        if (region.start < other.end && region.end > other.start) {
+          // Determine relative position using center points
+          const myCenter = (region.start + region.end) / 2;
+          const otherCenter = (other.start + other.end) / 2;
+
+          if (myCenter < otherCenter) {
+            // I am on the LEFT. My Right Edge hit his Left Edge.
+            // Clamp my end to his start.
+            region.end = other.start;
+
+            // If I got squashed too small, push my start back
+            if (region.end - region.start < MIN_DURATION) {
+              region.start = region.end - MIN_DURATION;
+            }
+          } else {
+            // I am on the RIGHT. My Left Edge hit his Right Edge.
+            // Clamp my start to his end.
+            region.start = other.end;
+
+            // If I got squashed too small, push my end out
+            if (region.end - region.start < MIN_DURATION) {
+              region.end = region.start + MIN_DURATION;
+            }
+          }
+          modified = true;
+        }
+      }
+
+      // 3. Force Visual Update if we clamped
+      if (modified) {
+        region.setOptions({ start: region.start, end: region.end });
+      }
+
+      // 4. Send Clean Data to Parent
+      const originalData = regionsData.find((d) => d.id === region.id);
+      // Use original symbol to fix "Object HTML" bug
+      const contentSafe = originalData ? originalData.chord_symbol : "";
+
+      if (onRegionChange && originalData) {
         onRegionChange({
           id: region.id,
           start: region.start,
           end: region.end,
-          content: region.content as string,
+          content: contentSafe,
         });
       }
     });
 
+    // Reset dragging flag slightly after interaction ends
+    ws.on("interaction", () => {
+      setTimeout(() => {
+        isDragging = false;
+      }, 100);
+    });
+
     regions.on("region-clicked", (region, e) => {
       e.stopPropagation();
+      isDragging = false;
       selectRegion(region.id);
     });
 
@@ -142,10 +195,8 @@
 
   // --- Reactivity ---
 
-  // Load Audio
   $effect(() => {
     if (wavesurfer && audioUrl) {
-      // Reset ready state when loading new audio
       isReady = false;
       wavesurfer.load(audioUrl).catch((err) => {
         if (err.name !== "AbortError") console.error(err);
@@ -153,28 +204,31 @@
     }
   });
 
-  // Sync Regions
+  // Sync Data -> Visuals
   $effect(() => {
-    // FIX: Only render if wsRegions exists AND audio isReady
-    if (wsRegions && regionsData && isReady && !isEditing) {
+    // Only re-render if we are NOT dragging.
+    // This prevents the parent's echo from stuttering our smooth drag.
+    if (wsRegions && regionsData && isReady && !isEditing && !isDragging) {
       const visualCount = wsRegions.getRegions().length;
-      // Force sync if counts mismatch or empty
+      // Simple check to see if we need a refresh
       if (visualCount !== regionsData.length || visualCount === 0) {
         renderVisualRegions();
       }
     }
   });
 
+  // Zoom
+  $effect(() => {
+    if (wavesurfer && isReady) {
+      wavesurfer.zoom(zoomLevel);
+    }
+  });
+
   function renderVisualRegions() {
     if (!wsRegions || !regionsData) return;
-
-    console.log(`Rendering ${regionsData.length} regions...`);
     wsRegions.clearRegions();
-
     regionsData.forEach((r) => {
-      // Double check we aren't rendering corrupt data
       if (r.end - r.start < MIN_DURATION) return;
-
       wsRegions!.addRegion({
         id: r.id,
         start: r.start,
@@ -187,7 +241,7 @@
     });
   }
 
-  // --- Helpers (Same as before) ---
+  // --- Helpers ---
 
   function selectRegion(id: string | null) {
     selectedRegionId = id;
@@ -198,32 +252,7 @@
     });
   }
 
-  function avoidOverlap(activeRegion: Region, regionsPlugin: RegionsPlugin) {
-    const regions = regionsPlugin
-      .getRegions()
-      .sort((a, b) => a.start - b.start);
-    const index = regions.findIndex((r) => r.id === activeRegion.id);
-    if (index === -1) return;
-
-    const prev = regions[index - 1];
-    const next = regions[index + 1];
-
-    if (prev && activeRegion.start < prev.end) {
-      activeRegion.start = prev.end;
-      if (activeRegion.end - activeRegion.start < MIN_DURATION) {
-        activeRegion.end = activeRegion.start + MIN_DURATION;
-      }
-    }
-
-    if (next && activeRegion.end > next.start) {
-      activeRegion.end = next.start;
-      if (activeRegion.end - activeRegion.start < MIN_DURATION) {
-        activeRegion.start = activeRegion.end - MIN_DURATION;
-      }
-    }
-  }
-
-  // --- Editing (Same as before) ---
+  // --- Editing ---
 
   async function startEditing(id: string) {
     const sourceData = regionsData.find((r) => r.id === id);
@@ -264,7 +293,7 @@
     selectRegion(null);
   }
 
-  // --- Global Inputs (Same as before) ---
+  // --- Global Inputs ---
 
   function handleKeyDown(e: KeyboardEvent) {
     if (
@@ -285,22 +314,48 @@
     const NORMAL_JUMP = 0.5;
     const jumpAmount = e.shiftKey ? SHIFT_JUMP : NORMAL_JUMP;
 
+    // LEFT / H
     if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
       if (wavesurfer) {
         if (e.key === "ArrowLeft") e.preventDefault();
-        const time = Math.max(0, wavesurfer.getCurrentTime() - jumpAmount);
-        wavesurfer.setTime(time);
+
+        if (e.altKey && wsRegions) {
+          const currentTime = wavesurfer.getCurrentTime();
+          const sorted = wsRegions
+            .getRegions()
+            .sort((a, b) => a.start - b.start);
+          const prev = sorted
+            .slice()
+            .reverse()
+            .find((r) => r.start < currentTime - 0.05);
+          if (prev) wavesurfer.setTime(prev.start);
+          else wavesurfer.setTime(0);
+        } else {
+          const time = Math.max(0, wavesurfer.getCurrentTime() - jumpAmount);
+          wavesurfer.setTime(time);
+        }
       }
     }
 
+    // RIGHT / L
     if (e.key === "ArrowRight" || e.key.toLowerCase() === "l") {
       if (wavesurfer) {
         if (e.key === "ArrowRight") e.preventDefault();
-        const time = Math.min(
-          wavesurfer.getDuration(),
-          wavesurfer.getCurrentTime() + jumpAmount,
-        );
-        wavesurfer.setTime(time);
+
+        if (e.altKey && wsRegions) {
+          const currentTime = wavesurfer.getCurrentTime();
+          const sorted = wsRegions
+            .getRegions()
+            .sort((a, b) => a.start - b.start);
+          const next = sorted.find((r) => r.start > currentTime + 0.05);
+          if (next) wavesurfer.setTime(next.start);
+        } else {
+          const time = Math.min(
+            wavesurfer.getDuration(),
+            wavesurfer.getCurrentTime() + jumpAmount,
+          );
+          wavesurfer.setTime(time);
+        }
       }
     }
 
@@ -322,7 +377,7 @@
     }
   }
 
-  // --- Exports (Same as before) ---
+  // --- Exports ---
 
   export function playPause() {
     wavesurfer?.playPause();
@@ -383,8 +438,21 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<div class="w-full bg-gray-900 rounded-lg p-4 shadow-inner relative">
+<div
+  class="w-full bg-gray-900 rounded-lg p-4 shadow-inner relative flex flex-col gap-2"
+>
   <div bind:this={container} class="w-full min-h-[128px]"></div>
+
+  <div class="flex justify-end items-center gap-2 px-2">
+    <span class="text-[10px] text-gray-500 uppercase font-bold">Zoom</span>
+    <input
+      type="range"
+      min="10"
+      max="300"
+      bind:value={zoomLevel}
+      class="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+    />
+  </div>
 
   {#if isEditing}
     <div
