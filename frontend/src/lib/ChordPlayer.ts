@@ -1,53 +1,70 @@
 import * as Tone from "tone";
-import { Chord } from "@tonaljs/tonal";
+import { Chord, Note } from "@tonaljs/tonal";
 
 export class ChordPlayer {
   private synth: Tone.PolySynth;
   private isReady: boolean = false;
 
   constructor() {
-    this.synth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: "triangle" }, // Default
+    // Electric Piano / Guitar-ish Sound (FM Synthesis)
+    this.synth = new Tone.PolySynth(Tone.FMSynth, {
+      oscillator: { type: "sine" },
+      harmonicity: 3,
+      modulationIndex: 2,
+      modulation: { type: "square" },
       envelope: {
-        attack: 0.05,
-        decay: 0.1,
-        sustain: 0.3,
-        release: 1,
+        attack: 0.005,
+        decay: 0.3,
+        sustain: 0.5,
+        release: 1.2,
       },
     }).toDestination();
-    this.synth.volume.value = -10;
+
+    // this.synth.volume.value = -12;
   }
+
   async ensureReady() {
     if (!this.isReady) {
-      await Tone.start(); // Browsers require a user gesture to start AudioContext
+      await Tone.start();
       this.isReady = true;
       console.log("Audio Engine Ready");
     }
   }
 
-  playChord(chordName: string, duration: number) {
+  playChord(chordName: string, duration: number, octave: number = 4) {
     if (!this.isReady) return;
 
-    // 1. Parse the chord name (e.g., "Cm7" -> ["C", "Eb", "G", "Bb"])
-    // We add "4" to the root to place it in the 4th octave by default if not specified
-    const chord = Chord.get(chordName);
+    let symbol = chordName;
+    let bassNote = null;
 
-    if (chord.empty) {
-      console.warn(`Could not parse chord: ${chordName}`);
-      return;
+    if (chordName.includes("/")) {
+      const parts = chordName.split("/");
+      symbol = parts[0];
+      bassNote = parts[1];
     }
 
-    // 2. Add octaves (simple strategy: spread around octave 4)
-    const notes = chord.notes.map((note) => {
-      // If the library returns just "C", append "4".
-      // If it returns "C#", append "4".
-      // If the user typed "C5", Tonal handles that.
-      return /\d/.test(note) ? note : note + "4";
+    const chord = Chord.get(symbol);
+    if (chord.empty) return;
+
+    const notesToPlay: string[] = [];
+
+    // 1. Bass Note (One octave lower than selected)
+    const bassOctave = Math.max(0, octave - 1);
+
+    if (bassNote && !Note.get(bassNote).empty) {
+      notesToPlay.push(bassNote + bassOctave);
+    } else {
+      if (chord.tonic) notesToPlay.push(chord.tonic + bassOctave);
+    }
+
+    // 2. Chord Notes (At selected octave)
+    chord.notes.forEach((note) => {
+      notesToPlay.push(note + octave);
     });
 
-    // 3. Trigger
-    // release = duration + a little tail
-    this.synth.triggerAttackRelease(notes, duration);
+    // 3. Play
+    const uniqueNotes = [...new Set(notesToPlay)];
+    this.synth.triggerAttackRelease(uniqueNotes, duration);
   }
 
   stopAll() {
@@ -58,8 +75,9 @@ export class ChordPlayer {
     this.synth.volume.rampTo(db, 0.1);
   }
 
-  // NEW: Allow changing sound type (sine, square, triangle, sawtooth)
-  setOscillatorType(type: "triangle" | "sine" | "square" | "sawtooth") {
-    this.synth.set({ oscillator: { type } });
+  setOscillatorType(type: any) {
+    if (["sine", "square", "triangle", "sawtooth"].includes(type)) {
+      this.synth.set({ oscillator: { type } });
+    }
   }
 }

@@ -85,6 +85,7 @@
         start: data.start,
         end: data.end,
         chord_symbol: data.content,
+        octave: data.octave || 4,
       };
     } else {
       // Add
@@ -93,6 +94,7 @@
         start: data.start,
         end: data.end,
         chord_symbol: data.content,
+        octave: data.octave || 4,
       });
     }
 

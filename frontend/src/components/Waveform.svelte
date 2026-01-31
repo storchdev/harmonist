@@ -5,6 +5,7 @@
   import type { Region } from "wavesurfer.js/dist/plugins/regions.esm.js";
   import type { ChordRegion, RegionChangeEvent } from "../types";
   import { ChordPlayer } from "../lib/ChordPlayer";
+  import { Chord, Note } from "@tonaljs/tonal";
 
   // --- Props ---
   let {
@@ -41,6 +42,8 @@
   let editValue = $state("");
   let editId = $state<string | null>(null);
   let editInputRef = $state<HTMLInputElement | undefined>(undefined);
+  let editOctave = $state(4);
+  let isInvalid = $state(false); // <--- NEW
 
   const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
   const COLOR_SELECTED = "rgba(239, 68, 68, 0.4)";
@@ -79,7 +82,11 @@
         if (cleanData) {
           const duration = r.end - r.start;
           if (duration < 0.05) return;
-          player.playChord(cleanData.chord_symbol, duration);
+          player.playChord(
+            cleanData.chord_symbol,
+            duration,
+            cleanData.octave || 4,
+          );
         }
       });
       lastTime = currentTime;
@@ -257,9 +264,13 @@
   async function startEditing(id: string) {
     const sourceData = regionsData.find((r) => r.id === id);
     if (!sourceData) return;
+
     editId = id;
     editValue = sourceData.chord_symbol;
+    editOctave = sourceData.octave || 4;
+
     isEditing = true;
+    isInvalid = false;
     contextMenu = null;
     await tick();
     editInputRef?.focus();
@@ -268,6 +279,40 @@
 
   function saveEdit() {
     if (!editId || !wsRegions) return;
+
+    // --- VALIDATION CHECK (SLASH SUPPORT) ---
+    const cleanValue = editValue.trim();
+
+    let isValid = true;
+
+    if (editValue.includes("/")) {
+      const parts = cleanValue.split("/");
+      const symbol = parts[0];
+      const bass = parts[1];
+
+      const parsedChord = Chord.get(symbol);
+      const parsedBass = Note.get(bass);
+
+      // 1. Check if chord exists AND has a root (tonic)
+      // 2. Check if bass note is valid
+      if (parsedChord.empty || !parsedChord.tonic || parsedBass.empty) {
+        isValid = false;
+      }
+    } else {
+      // --- STANDARD CHORD ---
+      const parsed = Chord.get(cleanValue);
+
+      // FIX: Check !parsed.tonic to reject "5", "7", "maj7" etc.
+      if (parsed.empty || !parsed.tonic) {
+        isValid = false;
+      }
+    }
+
+    if (!isValid) {
+      isInvalid = true; // Trigger UI error
+      return; // Block save
+    }
+
     const region = wsRegions.getRegions().find((r) => r.id === editId);
     if (region) {
       region.setOptions({ content: editValue });
@@ -277,6 +322,7 @@
           start: region.start,
           end: region.end,
           content: editValue,
+          octave: editOctave,
         });
       }
     }
@@ -465,9 +511,36 @@
         <input
           bind:this={editInputRef}
           bind:value={editValue}
+          oninput={() => (isInvalid = false)}
           class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
           placeholder="e.g. Cm7"
         />
+
+        {#if isInvalid}
+          <p class="text-red-400 text-xs mb-4">
+            Invalid chord name (try 'Cm7', 'G/B')
+          </p>
+        {:else}
+          <div class="mb-4"></div>
+        {/if}
+
+        <div class="mb-6">
+          <div class="flex justify-between mb-1">
+            <label class="text-xs text-gray-400 uppercase font-bold"
+              >Octave</label
+            >
+            <span class="text-xs text-blue-400 font-bold">{editOctave}</span>
+          </div>
+          <input
+            type="range"
+            min="2"
+            max="6"
+            step="1"
+            bind:value={editOctave}
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+          />
+        </div>
+
         <div class="flex justify-end gap-2">
           <button
             class="px-3 py-1 text-sm text-gray-400 hover:text-white"
