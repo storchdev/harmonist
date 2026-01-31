@@ -15,6 +15,19 @@ AUDIO_DIR = os.path.join(os.getcwd(), "audio_files")  # Place to store uploaded 
 os.makedirs(PROJECTS_DIR, exist_ok=True)
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
+# --- AI CONFIG ---
+ANALYSIS_DIR = os.path.join(os.getcwd(), "analysis_cache")
+os.makedirs(ANALYSIS_DIR, exist_ok=True)
+
+try:
+    from basic_pitch.inference import predict
+    import pretty_midi
+
+    AI_AVAILABLE = True
+except ImportError:
+    print("AI Library not installed.")
+    AI_AVAILABLE = False
+
 
 # --- HELPER FUNCTIONS ---
 def get_project_path(project_id):
@@ -106,3 +119,97 @@ def upload_audio():
     file.save(save_path)
 
     return jsonify({"filename": file.filename})
+
+
+# ... imports ...
+
+
+@app.route("/api/identify_chord", methods=["GET"])
+def get_chord_at_time():
+    """
+    Query: ?filename=...&time=...&onset=0.6&frame=0.4&min_note_len=100
+    """
+    if not AI_AVAILABLE:
+        return jsonify({"error": "AI not installed"}), 500
+
+    filename = request.args.get("filename")
+    timestamp = float(request.args.get("time", 0))
+
+    # Get Parameters (with defaults)
+    onset = float(request.args.get("onset", 0.5))
+    frame = float(request.args.get("frame", 0.3))
+    min_note_len = float(request.args.get("min_note_len", 58.0))
+
+    audio_path = os.path.join(AUDIO_DIR, filename)
+    midi_path = os.path.join(ANALYSIS_DIR, f"{filename}.mid")
+    meta_path = os.path.join(ANALYSIS_DIR, f"{filename}.meta.json")
+
+    if not os.path.exists(audio_path):
+        return jsonify({"error": "Audio file not found"}), 404
+
+    # --- CACHE INVALIDATION LOGIC ---
+    should_run_ai = True
+
+    if os.path.exists(midi_path) and os.path.exists(meta_path):
+        try:
+            with open(meta_path, "r") as f:
+                cached_meta = json.load(f)
+                # Check if params match (using small epsilon for floats just in case)
+                if (
+                    abs(cached_meta.get("onset", 0) - onset) < 0.01
+                    and abs(cached_meta.get("frame", 0) - frame) < 0.01
+                    and abs(cached_meta.get("min_note_len", 0) - min_note_len) < 1.0
+                ):
+                    should_run_ai = False
+        except:
+            should_run_ai = True  # Corrupt meta, re-run
+
+    if should_run_ai:
+        print(
+            f"Running AI for {filename} with params: onset={onset}, frame={frame}, len={min_note_len}"
+        )
+        try:
+            model_output, midi_data, note_events = predict(
+                audio_path,
+                onset_threshold=onset,
+                frame_threshold=frame,
+                minimum_note_length=min_note_len,
+                minimum_frequency=None,
+                maximum_frequency=None,
+            )
+            midi_data.write(midi_path)
+
+            # Save Metadata
+            with open(meta_path, "w") as f:
+                json.dump(
+                    {"onset": onset, "frame": frame, "min_note_len": min_note_len}, f
+                )
+
+        except Exception as e:
+            print(e)
+            return jsonify({"error": "AI Analysis Failed"}), 500
+
+    # 2. FAST LOOKUP
+    try:
+        midi_data = pretty_midi.PrettyMIDI(midi_path)
+    except:
+        return jsonify({"error": "Could not read analysis file"}), 500
+
+    active_notes = []
+    for instrument in midi_data.instruments:
+        for note in instrument.notes:
+            if note.start <= timestamp <= note.end:
+                active_notes.append(note.pitch)
+
+    if not active_notes:
+        return jsonify({"notes": [], "status": "silence"})
+
+    active_notes.sort()
+    PITCH_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+    note_names = []
+    for midi_num in active_notes:
+        idx = midi_num % 12
+        octave = (midi_num // 12) - 1
+        note_names.append(f"{PITCH_NAMES[idx]}{octave}")
+
+    return jsonify({"notes": note_names, "status": "success"})

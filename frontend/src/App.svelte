@@ -8,11 +8,32 @@
   let audioUrl = $state<string | null>(null);
   let waveformComponent = $state<Waveform | undefined>(undefined);
 
+  let showAiSettings = $state(false);
+  let aiSettings = $state({
+    onset: 0.6, // Sensitivity (Higher = less ghost notes)
+    frame: 0.4, // Sustain (Higher = less muddy)
+    minNoteLen: 100, // ms (Higher = ignore fast blips)
+  });
+
   // New state for the load menu
   let projectList = $state<{ id: string; name: string }[]>([]);
   let showLoadMenu = $state(false);
 
+  let isAiLoading = $state(false);
+
   // --- Actions ---
+
+  async function handleAiClick() {
+    if (!waveformComponent) return;
+
+    isAiLoading = true;
+    try {
+      // We await the child's function
+      await waveformComponent.askAiForChord();
+    } finally {
+      isAiLoading = false;
+    }
+  }
 
   async function createProject() {
     const res = await axios.post("/api/projects", { name: "New Analysis" });
@@ -110,6 +131,15 @@
 
   function handleAddChord() {
     waveformComponent?.addRegionAtCurrentTime("C");
+  }
+
+  function toggleSettings(e: MouseEvent) {
+    e.stopPropagation(); // Prevent the window click from firing immediately
+    showAiSettings = !showAiSettings;
+  }
+
+  function closeSettings() {
+    showAiSettings = false;
   }
 </script>
 
@@ -237,6 +267,110 @@
       >
         Add Chord
       </button>
+
+      <button
+        class="bg-indigo-600 px-4 py-2 rounded hover:bg-indigo-700 font-medium flex items-center gap-2 relative"
+        onclick={handleAiClick}
+        title="Identify chord at current time"
+      >
+        {#if isAiLoading}
+          <div
+            class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+          ></div>
+        {:else}
+          <span>✨ AI</span>
+        {/if}
+      </button>
+
+      <button
+        class="bg-indigo-600 px-4 py-2 rounded hover:bg-indigo-700 font-medium flex items-center gap-2 relative"
+        onclick={() => (showAiSettings = !showAiSettings)}
+        title="AI Settings"
+      >
+        AI Settings
+      </button>
+
+      {#if showAiSettings}
+        <div
+          class="fixed inset-0 bg-black/50 z-[100] backdrop-blur-sm"
+          onclick={closeSettings}
+        ></div>
+
+        <div
+          class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl p-5 z-[101]"
+          onclick={(e) => e.stopPropagation()}
+        >
+          <div class="flex justify-between items-center mb-4">
+            <h4 class="text-sm font-bold text-white uppercase tracking-wider">
+              AI Sensitivity
+            </h4>
+            <button
+              class="text-gray-400 hover:text-white"
+              onclick={closeSettings}>✕</button
+            >
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-gray-300">Detection Thresh</span>
+              <span class="text-indigo-300 font-mono">{aiSettings.onset}</span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="0.9"
+              step="0.05"
+              bind:value={aiSettings.onset}
+              class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
+            <p class="text-[10px] text-gray-500 mt-1">
+              Higher = Fewer, clearer notes
+            </p>
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-gray-300">Sustain Thresh</span>
+              <span class="text-indigo-300 font-mono">{aiSettings.frame}</span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="0.9"
+              step="0.05"
+              bind:value={aiSettings.frame}
+              class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
+            <p class="text-[10px] text-gray-500 mt-1">
+              Higher = Shorter sustain
+            </p>
+          </div>
+
+          <div class="mb-4">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-gray-300">Min Note (ms)</span>
+              <span class="text-indigo-300 font-mono"
+                >{aiSettings.minNoteLen}</span
+              >
+            </div>
+            <input
+              type="range"
+              min="30"
+              max="300"
+              step="10"
+              bind:value={aiSettings.minNoteLen}
+              class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
+          </div>
+
+          <div class="pt-2 border-t border-gray-700 flex justify-end">
+            <button
+              class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded"
+              onclick={closeSettings}>Done</button
+            >
+          </div>
+        </div>
+      {/if}
 
       <div class="h-8 w-px bg-gray-700 mx-2"></div>
 

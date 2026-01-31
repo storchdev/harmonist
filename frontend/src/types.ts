@@ -6,6 +6,7 @@ export interface ChordRegion {
   start: number;
   end: number;
   chord_symbol: string;
+  octave?: number;
 }
 
 // The structure of the full save file
@@ -24,4 +25,5 @@ export interface RegionChangeEvent {
   start: number;
   end: number;
   content: string;
+  octave?: number;
 }

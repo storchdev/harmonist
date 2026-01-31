@@ -2,3 +2,5 @@ audio_files/
 .venv/
 __pycache__/
 projects/
+analysis_cache/
+  

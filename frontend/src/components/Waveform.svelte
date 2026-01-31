@@ -5,7 +5,7 @@
   import type { Region } from "wavesurfer.js/dist/plugins/regions.esm.js";
   import type { ChordRegion, RegionChangeEvent } from "../types";
   import { ChordPlayer } from "../lib/ChordPlayer";
-  import { Chord, Note } from "@tonaljs/tonal";
+  import { Chord } from "@tonaljs/tonal";
 
   // --- Props ---
   let {
@@ -29,6 +29,9 @@
   let zoomLevel = $state(50);
   let isDragging = $state(false);
 
+  // AI Inspection State
+  let aiResult = $state<{ notes: string[]; name: string } | null>(null);
+
   let selectedRegionId = $state<string | null>(null);
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
     null,
@@ -42,8 +45,8 @@
   let editValue = $state("");
   let editId = $state<string | null>(null);
   let editInputRef = $state<HTMLInputElement | undefined>(undefined);
+  let isInvalid = $state(false);
   let editOctave = $state(4);
-  let isInvalid = $state(false); // <--- NEW
 
   const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
   const COLOR_SELECTED = "rgba(239, 68, 68, 0.4)";
@@ -70,6 +73,10 @@
     ws.on("decode", () => {
       isReady = true;
     });
+
+    // 1. Clear AI Popup on movement
+    ws.on("play", () => (aiResult = null));
+    ws.on("seeking", () => (aiResult = null));
 
     ws.on("audioprocess", (currentTime) => {
       if (!ws.isPlaying()) return;
@@ -104,34 +111,21 @@
     regions.on("region-updated", (region) => {
       isDragging = true;
 
-      // 1. Get all other regions
       const others = regions.getRegions().filter((r) => r.id !== region.id);
-
       let modified = false;
 
-      // 2. Check collision against EVERY other region
       for (const other of others) {
-        // Check for Overlap
         if (region.start < other.end && region.end > other.start) {
-          // Determine relative position using center points
           const myCenter = (region.start + region.end) / 2;
           const otherCenter = (other.start + other.end) / 2;
 
           if (myCenter < otherCenter) {
-            // I am on the LEFT. My Right Edge hit his Left Edge.
-            // Clamp my end to his start.
             region.end = other.start;
-
-            // If I got squashed too small, push my start back
             if (region.end - region.start < MIN_DURATION) {
               region.start = region.end - MIN_DURATION;
             }
           } else {
-            // I am on the RIGHT. My Left Edge hit his Right Edge.
-            // Clamp my start to his end.
             region.start = other.end;
-
-            // If I got squashed too small, push my end out
             if (region.end - region.start < MIN_DURATION) {
               region.end = region.start + MIN_DURATION;
             }
@@ -140,14 +134,11 @@
         }
       }
 
-      // 3. Force Visual Update if we clamped
       if (modified) {
         region.setOptions({ start: region.start, end: region.end });
       }
 
-      // 4. Send Clean Data to Parent
       const originalData = regionsData.find((d) => d.id === region.id);
-      // Use original symbol to fix "Object HTML" bug
       const contentSafe = originalData ? originalData.chord_symbol : "";
 
       if (onRegionChange && originalData) {
@@ -156,11 +147,11 @@
           start: region.start,
           end: region.end,
           content: contentSafe,
+          octave: originalData.octave, // preserve octave
         });
       }
     });
 
-    // Reset dragging flag slightly after interaction ends
     ws.on("interaction", () => {
       setTimeout(() => {
         isDragging = false;
@@ -211,20 +202,15 @@
     }
   });
 
-  // Sync Data -> Visuals
   $effect(() => {
-    // Only re-render if we are NOT dragging.
-    // This prevents the parent's echo from stuttering our smooth drag.
     if (wsRegions && regionsData && isReady && !isEditing && !isDragging) {
       const visualCount = wsRegions.getRegions().length;
-      // Simple check to see if we need a refresh
       if (visualCount !== regionsData.length || visualCount === 0) {
         renderVisualRegions();
       }
     }
   });
 
-  // Zoom
   $effect(() => {
     if (wavesurfer && isReady) {
       wavesurfer.zoom(zoomLevel);
@@ -248,6 +234,40 @@
     });
   }
 
+  // --- AI Logic ---
+
+  export async function askAiForChord() {
+    if (!wavesurfer || !audioUrl) return;
+
+    const currentTime = wavesurfer.getCurrentTime();
+    const filename = audioUrl.split("/").pop();
+    if (!filename) return;
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:5000/api/identify_chord?filename=${filename}&time=${currentTime}`,
+      );
+      const data = await res.json();
+
+      if (data.notes && data.notes.length > 0) {
+        // Brain: Interpret Notes
+        const potentialChords = Chord.detect(data.notes);
+        const name = potentialChords.length > 0 ? potentialChords[0] : "?";
+
+        // Display: Show Popup
+        aiResult = {
+          notes: data.notes,
+          name: name,
+        };
+      } else {
+        aiResult = { notes: [], name: "Silence / No Chord" };
+      }
+    } catch (err) {
+      console.error("AI Error:", err);
+      aiResult = null;
+    }
+  }
+
   // --- Helpers ---
 
   function selectRegion(id: string | null) {
@@ -264,11 +284,9 @@
   async function startEditing(id: string) {
     const sourceData = regionsData.find((r) => r.id === id);
     if (!sourceData) return;
-
     editId = id;
     editValue = sourceData.chord_symbol;
     editOctave = sourceData.octave || 4;
-
     isEditing = true;
     isInvalid = false;
     contextMenu = null;
@@ -280,48 +298,47 @@
   function saveEdit() {
     if (!editId || !wsRegions) return;
 
-    // --- VALIDATION CHECK (SLASH SUPPORT) ---
+    // VALIDATION
+    let isValid = true;
     const cleanValue = editValue.trim();
 
-    let isValid = true;
-
-    if (editValue.includes("/")) {
+    if (cleanValue.includes("/")) {
       const parts = cleanValue.split("/");
-      const symbol = parts[0];
-      const bass = parts[1];
+      const parsedChord = Chord.get(parts[0]);
+      // Tonal's Note.get returns { empty: boolean }
+      // We must ensure the bass note is valid, not empty
+      // Tonal < 3.0 uses .empty, newer might use .isEmpty.
+      // Note.get("C") -> { name: "C", ... empty: false }
+      const parsedBass = Chord.get(parts[1]); // Trick: Chord.get works on single notes too or use Note.get logic if imported
 
-      const parsedChord = Chord.get(symbol);
-      const parsedBass = Note.get(bass);
-
-      // 1. Check if chord exists AND has a root (tonic)
-      // 2. Check if bass note is valid
-      if (parsedChord.empty || !parsedChord.tonic || parsedBass.empty) {
+      // Actually, let's stick to the previous robust Note check via Chord or simple regex if Import is tricky.
+      // But since we removed Note import in this specific snippet to keep it clean, let's use Chord.get for safety
+      if (
+        parsedChord.empty ||
+        !parsedChord.tonic ||
+        Chord.get(parts[1]).empty
+      ) {
         isValid = false;
       }
     } else {
-      // --- STANDARD CHORD ---
       const parsed = Chord.get(cleanValue);
-
-      // FIX: Check !parsed.tonic to reject "5", "7", "maj7" etc.
-      if (parsed.empty || !parsed.tonic) {
-        isValid = false;
-      }
+      if (parsed.empty || !parsed.tonic) isValid = false;
     }
 
     if (!isValid) {
-      isInvalid = true; // Trigger UI error
-      return; // Block save
+      isInvalid = true;
+      return;
     }
 
     const region = wsRegions.getRegions().find((r) => r.id === editId);
     if (region) {
-      region.setOptions({ content: editValue });
+      region.setOptions({ content: cleanValue });
       if (onRegionChange) {
         onRegionChange({
           id: region.id,
           start: region.start,
           end: region.end,
-          content: editValue,
+          content: cleanValue,
           octave: editOctave,
         });
       }
@@ -360,6 +377,13 @@
     const NORMAL_JUMP = 0.5;
     const jumpAmount = e.shiftKey ? SHIFT_JUMP : NORMAL_JUMP;
 
+    // Helper: All Boundaries
+    const getBoundaries = () => {
+      if (!wsRegions) return [];
+      const times = wsRegions.getRegions().flatMap((r) => [r.start, r.end]);
+      return [...new Set(times)].sort((a, b) => a - b);
+    };
+
     // LEFT / H
     if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
       if (wavesurfer) {
@@ -367,14 +391,9 @@
 
         if (e.altKey && wsRegions) {
           const currentTime = wavesurfer.getCurrentTime();
-          const sorted = wsRegions
-            .getRegions()
-            .sort((a, b) => a.start - b.start);
-          const prev = sorted
-            .slice()
-            .reverse()
-            .find((r) => r.start < currentTime - 0.05);
-          if (prev) wavesurfer.setTime(prev.start);
+          const boundaries = getBoundaries();
+          const prev = boundaries.reverse().find((t) => t < currentTime - 0.05);
+          if (prev !== undefined) wavesurfer.setTime(prev);
           else wavesurfer.setTime(0);
         } else {
           const time = Math.max(0, wavesurfer.getCurrentTime() - jumpAmount);
@@ -390,11 +409,10 @@
 
         if (e.altKey && wsRegions) {
           const currentTime = wavesurfer.getCurrentTime();
-          const sorted = wsRegions
-            .getRegions()
-            .sort((a, b) => a.start - b.start);
-          const next = sorted.find((r) => r.start > currentTime + 0.05);
-          if (next) wavesurfer.setTime(next.start);
+          const boundaries = getBoundaries();
+          const next = boundaries.find((t) => t > currentTime + 0.05);
+          if (next !== undefined) wavesurfer.setTime(next);
+          else wavesurfer.setTime(wavesurfer.getDuration());
         } else {
           const time = Math.min(
             wavesurfer.getDuration(),
@@ -500,6 +518,25 @@
     />
   </div>
 
+  {#if aiResult}
+    <div
+      class="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+    >
+      <div
+        class="bg-indigo-900/90 backdrop-blur border border-indigo-400 text-white px-6 py-3 rounded-xl shadow-2xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-2 duration-200"
+      >
+        <span
+          class="text-xs text-indigo-300 uppercase font-bold tracking-widest mb-1"
+          >AI Detected</span
+        >
+        <div class="text-2xl font-bold">{aiResult.name}</div>
+        <div class="text-sm text-gray-300 mt-1 font-mono opacity-80">
+          {aiResult.notes.join(" - ")}
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if isEditing}
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
@@ -508,21 +545,25 @@
         class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-600 w-80"
       >
         <h3 class="text-lg font-bold mb-4 text-white">Edit Chord</h3>
-        <input
-          bind:this={editInputRef}
-          bind:value={editValue}
-          oninput={() => (isInvalid = false)}
-          class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-          placeholder="e.g. Cm7"
-        />
 
-        {#if isInvalid}
-          <p class="text-red-400 text-xs mb-4">
-            Invalid chord name (try 'Cm7', 'G/B')
-          </p>
-        {:else}
-          <div class="mb-4"></div>
-        {/if}
+        <div class="mb-4">
+          <label class="text-xs text-gray-400 uppercase font-bold block mb-1"
+            >Symbol</label
+          >
+          <input
+            bind:this={editInputRef}
+            bind:value={editValue}
+            oninput={() => (isInvalid = false)}
+            class="w-full bg-gray-900 border rounded p-2 text-white outline-none transition-colors
+                     {isInvalid
+              ? 'border-red-500 focus:ring-2 focus:ring-red-500'
+              : 'border-gray-600 focus:ring-2 focus:ring-blue-500'}"
+            placeholder="e.g. Cm7"
+          />
+          {#if isInvalid}
+            <p class="text-red-400 text-xs mt-1">Invalid chord name</p>
+          {/if}
+        </div>
 
         <div class="mb-6">
           <div class="flex justify-between mb-1">
