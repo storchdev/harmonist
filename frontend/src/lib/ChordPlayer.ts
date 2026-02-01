@@ -3,9 +3,12 @@ import { Chord, Note } from "@tonaljs/tonal";
 
 export class ChordPlayer {
   private synth: Tone.PolySynth;
+  private limiter: Tone.Limiter; // NEW
   private isReady: boolean = false;
 
   constructor() {
+    this.limiter = new Tone.Limiter(-1).toDestination();
+
     // Electric Piano / Guitar-ish Sound (FM Synthesis)
     this.synth = new Tone.PolySynth(Tone.FMSynth, {
       oscillator: { type: "sine" },
@@ -20,7 +23,7 @@ export class ChordPlayer {
       },
     }).toDestination();
 
-    // this.synth.volume.value = -12;
+    this.synth.volume.value = 0;
   }
 
   async ensureReady() {

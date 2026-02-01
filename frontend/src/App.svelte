@@ -105,6 +105,7 @@
         start: data.start,
         end: data.end,
         chord_symbol: data.content,
+        // subtitle: data.subtitle, // Save Subtitle
         octave: data.octave || 4,
       };
     } else {
@@ -114,6 +115,7 @@
         start: data.start,
         end: data.end,
         chord_symbol: data.content,
+        // subtitle: data.subtitle, // Save Subtitle
         octave: data.octave || 4,
       });
     }
@@ -380,8 +382,8 @@
         <input
           type="range"
           min="-40"
-          max="0"
-          value="-10"
+          max="40"
+          value="0"
           oninput={(e) =>
             waveformComponent?.setSynthVolume(Number(e.currentTarget.value))}
           class="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer mt-2"

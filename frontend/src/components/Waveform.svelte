@@ -2,7 +2,6 @@
   import { onMount, tick } from "svelte";
   import WaveSurfer from "wavesurfer.js";
   import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
-  import type { Region } from "wavesurfer.js/dist/plugins/regions.esm.js";
   import type { ChordRegion, RegionChangeEvent } from "../types";
   import { ChordPlayer } from "../lib/ChordPlayer";
   import { Chord } from "@tonaljs/tonal";
