@@ -2,18 +2,18 @@
 
 ## 1. Data Integrity & Validation
 
-- **Source of Truth:** The `regionsData` prop (JSON) is the definitive source. Never trust `region.content` or `region.data` from WaveSurfer for business logic as they are mutated (DOM elements).
+- **Source of Truth:** The `regionsData` prop (JSON) is the definitive source. Never trust `region.content` or `region.data` from WaveSurfer for business logic.
 - **Sanitization:** Regions with `duration < 0.1s` are invalid and must be filtered out during rendering and playback.
-- **Chord Validity:** All chords must be valid according to Tonal.js.
-  - **Invariant:** Every saved chord must have a detectable **tonic** (root note). Inputs like "5", "7", or "maj7" (qualities without roots) are strictly rejected.
-  - **Slash Chords:** Must be manually parsed. `X/Y` is valid only if `X` is a valid chord (with tonic) AND `Y` is a valid note.
+- **Chord Validity:**
+  - **Invariant:** Every saved chord must have a detectable **tonic** (root note). Qualities without roots (e.g., "5", "maj7") are rejected.
+  - **Slash Chords:** Must be manually parsed. `X/Y` is valid only if `X` is a valid chord AND `Y` is a valid note.
 
 ## 2. Audio Engine
 
-- **Sound Profile:** Use FM Synthesis (Bell/Electric Piano) for a cleaner, less jarring tone than raw oscillators.
-- **Initialization:** `ensureReady()` must be triggered by a user gesture (Play).
-- **Zero Duration:** The synth must never be triggered with duration <= 0 (causes crash).
-- **Lifecycle:** Manually call `stopAll()` on `pause` and `seeking` events to prevent "stuck" notes.
+- **Sound Profile:** Use FM Synthesis with a **Limiter** on the master bus.
+  - _Constraint:_ The synth volume is boosted to `-4dB` to maximize loudness, relying on the Limiter (`-1dB` threshold) to prevent digital clipping during polyphony.
+- **Initialization:** `ensureReady()` must be triggered by a user gesture.
+- **Lifecycle:** Manually call `stopAll()` on `pause` and `seeking` events.
 
 ## 3. Waveform Visualization
 
@@ -26,3 +26,8 @@
 - **No Overlaps:** Chords are "solid." Dragging into a neighbor must strictly clamp the edge.
 - **Collision Detection:** Use "Center of Mass" logic. If a drag intersects another region, clamp to the left or right edge based on relative center positions.
 - **Minimum Duration:** Resizing or clamping cannot reduce a region below `MIN_DURATION` (0.1s).
+- **AI Interaction:** The AI button must **never** modify project state directly. It is a read-only "Inspector" that displays data. The user must manually choose to apply that data.
+
+## 5. Deployment
+
+- **Build Process:** The frontend must be built to static files (`npm run build`) and served by Flask. We do not use a separate Node server in production.

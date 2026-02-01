@@ -382,8 +382,8 @@
         <input
           type="range"
           min="-40"
-          max="40"
-          value="0"
+          max="20"
+          value="-10"
           oninput={(e) =>
             waveformComponent?.setSynthVolume(Number(e.currentTarget.value))}
           class="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer mt-2"
