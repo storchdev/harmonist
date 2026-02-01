@@ -67,7 +67,7 @@ Once built, you only need to run the Python server. It will serve both the API a
 3. Run the app:
 
 ```bash
-uv run flask run app.py
+uv run flask run
 ```
 
 4. Open your browser to: **`http://127.0.0.1:5000`**
