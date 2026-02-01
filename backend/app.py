@@ -1,11 +1,22 @@
-import os
 import json
+import os
 import uuid
-from flask import Flask, jsonify, request, send_file
+
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+)
 from flask_cors import CORS
 
-app = Flask(__name__)
-
+app = Flask(
+    __name__,
+    static_folder="../frontend/dist/assets",
+    template_folder="../frontend/dist",
+)
 
 CORS(app)  # Allow cross-origin requests for dev
 
@@ -20,8 +31,8 @@ ANALYSIS_DIR = os.path.join(os.getcwd(), "analysis_cache")
 os.makedirs(ANALYSIS_DIR, exist_ok=True)
 
 try:
-    from basic_pitch.inference import predict
     import pretty_midi
+    from basic_pitch.inference import predict
 
     AI_AVAILABLE = True
 except ImportError:
@@ -35,6 +46,23 @@ def get_project_path(project_id):
 
 
 # --- ROUTES ---
+
+
+@app.route("/")
+def serve_index():
+    return render_template("index.html")
+
+
+# Catch-all route to handle SvelteKit/Vite client-side routing
+# If the path isn't an API route, serve the index.html
+@app.route("/<path:path>")
+def catch_all(path):
+    # Check if path exists in static folder (e.g. favicon.ico)
+    if path.startswith("assets/"):
+        return send_from_directory(
+            "../frontend/dist/assets", path.replace("assets/", "")
+        )
+    return render_template("index.html")
 
 
 @app.route("/api/test")
