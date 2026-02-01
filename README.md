@@ -1,6 +1,6 @@
 ## i tried vibe coding :((
 
-# Chord Analyzer AI
+# Harmonist
 
 A local web application that uses AI to analyze audio files, detect chords, and create an interactive, editable timeline.
 

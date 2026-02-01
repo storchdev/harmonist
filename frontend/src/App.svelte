@@ -145,7 +145,7 @@
 </script>
 
 <main class="min-h-screen bg-gray-800 text-white p-8">
-  <h1 class="text-3xl font-bold mb-6">Chord Analyzer</h1>
+  <h1 class="text-3xl font-bold mb-6">Harmonist</h1>
 
   {#if !currentProject}
     <div class="flex gap-4">
