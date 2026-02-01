@@ -80,7 +80,7 @@
     ws.on("audioprocess", (currentTime) => {
       if (!ws.isPlaying()) return;
       const activeRegions = regions.getRegions().filter((r) => {
-        return r.start >= lastTime && r.start <= currentTime;
+        return r.start >= lastTime + 0.1 && r.start <= currentTime + 0.1;
       });
 
       activeRegions.forEach((r) => {
