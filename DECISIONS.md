@@ -7,27 +7,37 @@
 - **Implementation:**
   1.  **Lazy:** The model runs only when the user requests data for a specific file.
   2.  **Cache:** The raw MIDI output is saved to disk (`.mid`).
-  3.  **Query:** Subsequent requests read the MIDI file instantly to find notes at the specific timestamp (`time=12.5s`).
-- **Responsibility Split:** The Backend acts as the "Ear" (returns raw notes: C, E, G). The Frontend acts as the "Brain" (uses Tonal.js to name the chord: "C Major").
+  3.  **Query:** Subsequent requests read the MIDI file instantly.
+- **Responsibility Split:** Backend = "Ear" (raw notes). Frontend = "Brain" (chord naming).
 
-## 2. Audio Limiting
+## 2. Audio Limiting & Voice Management
 
-- **Problem:** Polyphonic FM synthesis caused digital clipping (distortion) when 4+ notes played simultaneously.
-- **Decision:** Insert a Brick-wall Limiter (`Tone.Limiter`).
-- **Why:** Allows us to boost the perceived volume of single notes without destroying the audio quality during complex chords.
+- **Problem:** Polyphonic FM synthesis caused digital clipping when resuming playback in dense regions.
+- **Decision:** Insert a Brick-wall Limiter (`Tone.Limiter`) and enforce a strict `stopAll()` before every `play()` call.
+- **Why:** Prevents "voice stacking" where the previous chord's release tail overlaps with the new chord's attack, causing a volume spike > 0dB.
 
-## 3. Settings Management
+## 3. Separation of Concerns (Controller Pattern)
 
-- **Decision:** Global Modal for AI Settings.
-- **Why:** AI sensitivity parameters (`onset`, `frame_threshold`) are complex. Putting them in a dropdown inside the button was causing layout clipping issues. A centered modal detached from the button context is more robust.
+- **Decision:** Split the "God Component" (`Waveform.svelte`) into a modular Class-based controller.
+  - `WaveformController`: Coordinator.
+  - `RegionManager`: Handles CRUD, Physics (collisions), and Sync.
+  - `InputManager`: Handles Keyboard/Mouse shortcuts and Focus guarding.
+- **Why:** `Waveform.svelte` exceeded 400 lines and mixed View logic with Audio Engine logic. The refactor allows distinct testing of physics vs. playback.
 
 ## 4. State Management (Svelte 5)
 
 - **Decision:** Use `onMount` for setup and Runes (`$state`, `$effect`) for reactivity.
-- **Why:** Decouples the imperative, DOM-heavy WaveSurfer lifecycle from Svelte's reactive data flow, preventing initialization loops.
+- **Why:** Decouples the imperative, DOM-heavy WaveSurfer lifecycle from Svelte's reactive data flow.
 
-## 5. Region "Content" Handling
+## 5. Navigation & Editing UX
 
-- **Problem:** WaveSurfer's Regions Plugin mutates the `content` property, turning a string ("Cm7") into an `HTMLElement` (`<div>Cm7</div>`) after rendering.
-- **Decision:** We ignore `region.content` when reading data.
-- **Solution:** When an event fires (click, drag, play), we take the `region.id` and look up the clean data from our own `regionsData` array. We only write to `region.content` when updating the visual label.
+- **Decision:** Context-Aware Shortcuts.
+  - **Global Mode:** Arrow keys seek timeline. `Ctrl+Arrows` jump to boundaries. `Shift+Arrows` step by 0.1s.
+  - **Region Mode (Selection Active):** Arrow keys move the region. `Ctrl+Arrows` select neighbors. `Shift+Arrows` resize the region edge.
+- **Why:** Maximizes the utility of limited keys (H/L/Arrows) without requiring complex modal switching.
+
+## 6. Data Portability
+
+- **Decision:** Client-side Export/Import.
+- **Why:** Users need to backup projects or move them between machines without relying on the database ID persistence (which might be wiped in dev).
+- **Implementation:** `Blob` generation for download, `FileReader` for import.
