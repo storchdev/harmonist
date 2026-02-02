@@ -14,30 +14,42 @@
   let container = $state<HTMLElement>();
   let controller = $state<WaveformController>();
 
+  // UI States
   let aiResult = $state<{ notes: string[]; name: string } | null>(null);
   let editState = $state<{ id: string; value: string; octave: number } | null>(
     null,
   );
+  let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
+    null,
+  );
+
+  // Validation State
+  let isInvalid = $state(false);
 
   onMount(() => {
     if (!container) return;
-    controller = new WaveformController(
-      container,
-      onRegionChange,
-      () => {
+
+    controller = new WaveformController(container, {
+      onRegionChange: (e) => onRegionChange(e),
+      onUserInteraction: () => {
         aiResult = null;
-      }, // Clear AI on interaction
-    );
+        contextMenu = null;
+      },
+      onShowContextMenu: (e, id) => {
+        contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
+      },
+      onEditRegion: (id) => startEditing(id),
+    });
+
     return () => controller?.destroy();
   });
 
-  // Sync Logic
   $effect(() => {
     if (controller && audioUrl) controller.load(audioUrl);
   });
-
   $effect(() => {
-    if (controller && regionsData) controller.syncRegions(regionsData);
+    if (controller && controller.isReady && regionsData)
+      controller.syncRegions(regionsData);
   });
 
   // Public Actions
@@ -62,18 +74,57 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (editState) return;
+    if (editState) {
+      if (e.key === "Enter") saveEdit(); // Quick save
+      return;
+    }
     controller?.handleShortcut(e);
+  }
+
+  function startEditing(id: string) {
+    const r = regionsData.find((reg) => reg.id === id);
+    if (!r) return;
+    editState = { id, value: r.chord_symbol, octave: r.octave || 4 };
+    isInvalid = false; // Reset error
+    contextMenu = null;
   }
 
   function saveEdit() {
     if (!editState || !controller) return;
-    controller.updateRegionContent(
-      editState.id,
-      editState.value,
-      editState.octave,
-    );
+
+    // --- Validation Logic ---
+    let isValid = true;
+    const cleanValue = editState.value.trim();
+
+    if (cleanValue.includes("/")) {
+      const parts = cleanValue.split("/");
+      const parsedChord = Chord.get(parts[0]);
+      // Tonal doesn't strictly separate Note.get and Chord.get for simple validation
+      const parsedBass = Chord.get(parts[1]);
+
+      if (parsedChord.empty || !parsedChord.tonic || parsedBass.empty) {
+        isValid = false;
+      }
+    } else {
+      const parsed = Chord.get(cleanValue);
+      if (parsed.empty || !parsed.tonic) isValid = false;
+    }
+
+    if (!isValid) {
+      isInvalid = true;
+      return;
+    }
+    // ------------------------
+
+    controller.updateRegionContent(editState.id, cleanValue, editState.octave);
     editState = null;
+  }
+
+  function handleDeleteContext() {
+    if (contextMenu && controller) {
+      controller.deleteRegion(contextMenu.regionId);
+      contextMenu = null;
+    }
   }
 </script>
 
@@ -123,11 +174,43 @@
         class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-600 w-80"
       >
         <h3 class="text-lg font-bold mb-4 text-white">Edit Chord</h3>
-        <input
-          bind:value={editState.value}
-          class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-          placeholder="e.g. Cm7"
-        />
+
+        <div class="mb-4">
+          <label class="text-xs text-gray-400 uppercase font-bold block mb-1"
+            >Symbol</label
+          >
+          <input
+            bind:value={editState.value}
+            oninput={() => (isInvalid = false)}
+            class="w-full bg-gray-900 border rounded p-2 text-white outline-none transition-colors {isInvalid
+              ? 'border-red-500 ring-1 ring-red-500'
+              : 'border-gray-600 focus:ring-2 focus:ring-blue-500'}"
+            placeholder="e.g. Cm7"
+            autofocus
+          />
+          {#if isInvalid}
+            <p class="text-red-400 text-xs mt-1">Invalid chord name</p>
+          {/if}
+        </div>
+
+        <div class="mb-6">
+          <div class="flex justify-between mb-1">
+            <label class="text-xs text-gray-400 uppercase font-bold"
+              >Octave</label
+            >
+            <span class="text-xs text-blue-400 font-bold"
+              >{editState.octave}</span
+            >
+          </div>
+          <input
+            type="range"
+            min="2"
+            max="6"
+            step="1"
+            bind:value={editState.octave}
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+          />
+        </div>
 
         <div class="flex justify-end gap-2">
           <button
@@ -141,5 +224,29 @@
         </div>
       </div>
     </div>
+  {/if}
+
+  {#if contextMenu}
+    <div
+      class="fixed bg-gray-800 border border-gray-600 shadow-xl rounded z-[100] text-sm flex flex-col py-1 min-w-[120px]"
+      style="top: {contextMenu.y}px; left: {contextMenu.x}px"
+    >
+      <button
+        class="px-4 py-2 hover:bg-gray-700 text-left text-white"
+        onclick={() => startEditing(contextMenu!.regionId)}>Edit Chord</button
+      >
+      <button
+        class="px-4 py-2 hover:bg-red-900/50 text-left text-red-300"
+        onclick={handleDeleteContext}>Delete</button
+      >
+    </div>
+    <div
+      class="fixed inset-0 z-[99]"
+      onclick={() => (contextMenu = null)}
+      oncontextmenu={(e) => {
+        e.preventDefault();
+        contextMenu = null;
+      }}
+    ></div>
   {/if}
 </div>

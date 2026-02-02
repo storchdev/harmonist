@@ -1,7 +1,7 @@
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import { ChordPlayer } from "./ChordPlayer";
-import type { ChordRegion, RegionChangeEvent } from "../types";
+import type { ChordRegion } from "../types";
 
 const MIN_DURATION = 0.1;
 const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
@@ -11,22 +11,37 @@ export class WaveformController {
   private ws: WaveSurfer;
   private wsRegions: RegionsPlugin;
   private player: ChordPlayer;
+
+  // Callbacks
   private onRegionChange: (event: any) => void;
   private onUserInteraction: () => void;
-  private lastTime = 0;
+  private onShowContextMenu: (e: MouseEvent, id: string) => void;
+  private onEditRegion: (id: string) => void;
 
-  // Reactive State
+  // State
+  private regionsCache: ChordRegion[] = [];
+  private lastTime = 0;
+  private selectedRegionId: string | null = null; // Track selection for Delete key
+
+  isReady = $state(false);
   isPlaying = $state(false);
   currentTime = $state(0);
   duration = $state(0);
 
   constructor(
     container: HTMLElement,
-    onRegionChange: (event: any) => void,
-    onUserInteraction: () => void,
+    callbacks: {
+      onRegionChange: (event: any) => void;
+      onUserInteraction: () => void;
+      onShowContextMenu: (e: MouseEvent, id: string) => void;
+      onEditRegion: (id: string) => void;
+    },
   ) {
-    this.onRegionChange = onRegionChange;
-    this.onUserInteraction = onUserInteraction;
+    this.onRegionChange = callbacks.onRegionChange;
+    this.onUserInteraction = callbacks.onUserInteraction;
+    this.onShowContextMenu = callbacks.onShowContextMenu;
+    this.onEditRegion = callbacks.onEditRegion;
+
     this.player = new ChordPlayer();
 
     this.ws = WaveSurfer.create({
@@ -44,14 +59,16 @@ export class WaveformController {
     this.setupRegionEvents();
   }
 
+  // ... setupAudioEvents() remains the same ...
   private setupAudioEvents() {
     this.ws.on("decode", () => {
       this.duration = this.ws.getDuration();
+      this.isReady = true;
     });
     this.ws.on("play", () => {
       this.isPlaying = true;
       this.player.ensureReady();
-      this.onUserInteraction(); // Clear AI popup
+      this.onUserInteraction();
     });
     this.ws.on("pause", () => {
       this.isPlaying = false;
@@ -61,30 +78,28 @@ export class WaveformController {
       this.lastTime = t;
       this.currentTime = t;
       this.player.stopAll();
-      this.onUserInteraction(); // Clear AI popup
+      this.onUserInteraction();
     });
     this.ws.on("timeupdate", (t) => {
       this.currentTime = t;
     });
     this.ws.on("audioprocess", (t) => {
       if (!this.ws.isPlaying()) return;
-
-      // Simple region playback trigger
       const active = this.wsRegions
         .getRegions()
         .filter((r) => r.start >= this.lastTime + 0.1 && r.start <= t + 0.1);
-
       active.forEach((r) => {
-        const content =
-          (r as any).content?.innerText || (r as any).content || "";
-        const dur = r.end - r.start;
-        if (dur > 0.05 && content) this.player.playChord(content, dur, 4);
+        const data = this.regionsCache.find((cache) => cache.id === r.id);
+        if (data && r.end - r.start > 0.05) {
+          this.player.playChord(data.chord_symbol, r.end - r.start, 4);
+        }
       });
       this.lastTime = t;
     });
   }
 
   private setupRegionEvents() {
+    // 1. Drag & Update
     this.wsRegions.on("region-updated", (region) => {
       this.handleCollision(region);
       this.onRegionChange({
@@ -96,17 +111,47 @@ export class WaveformController {
       });
     });
 
+    // 2. Selection
     this.wsRegions.on("region-clicked", (region, e) => {
       e.stopPropagation();
       this.selectRegion(region.id);
     });
 
     this.ws.on("click", () => this.selectRegion(null));
+
+    // 3. Double Click -> Edit
+    this.wsRegions.on("region-double-clicked", (region, e) => {
+      e.stopPropagation();
+      this.onEditRegion(region.id);
+    });
+
+    // 4. Right Click -> Context Menu
+    this.wsRegions.on("region-created", (region) => {
+      if (region.element) {
+        region.element.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.selectRegion(region.id);
+          this.onShowContextMenu(e, region.id);
+        });
+      }
+    });
   }
 
-  // --- Public API ---
+  // --- Actions ---
 
+  deleteRegion(id: string) {
+    const r = this.wsRegions.getRegions().find((reg) => reg.id === id);
+    if (r) {
+      r.remove();
+      this.onRegionChange({ action: "delete", id: id });
+      this.selectRegion(null);
+    }
+  }
+
+  // ... syncRegions, load, destroy, playPause, zoom, volume setters remain the same ...
   async load(url: string) {
+    this.isReady = false;
     try {
       await this.ws.load(url);
     } catch (e) {
@@ -122,49 +167,45 @@ export class WaveformController {
   playPause() {
     this.ws.playPause();
   }
-
   setZoom(val: number) {
     this.ws.zoom(val);
   }
-
   getCurrentTime() {
     return this.ws.getCurrentTime();
   }
-
   setOscillator(type: any) {
     this.player.setOscillatorType(type);
   }
-
   setSynthVolume(val: number) {
     this.player.setVolume(val);
   }
 
   syncRegions(data: ChordRegion[]) {
-    // Robust sync: Clear and redraw if counts mismatch or forced
-    // (Simplest way to ensure "Regions show up" is to clear/add)
-    const current = this.wsRegions.getRegions();
-    if (current.length === 0 && data.length === 0) return;
+    this.regionsCache = data;
+    if (!this.isReady) return;
 
-    // Simple diffing by count to prevent constant flashing,
-    // but allowing full redraw ensures sync
-    this.wsRegions.clearRegions();
-    data.forEach((r) => {
-      if (r.end - r.start < MIN_DURATION) return;
-      this.wsRegions.addRegion({
-        id: r.id,
-        start: r.start,
-        end: r.end,
-        content: r.chord_symbol,
-        color: COLOR_DEFAULT,
-        drag: true,
-        resize: true,
+    const currentRegions = this.wsRegions.getRegions();
+    if (currentRegions.length === 0 || currentRegions.length !== data.length) {
+      this.wsRegions.clearRegions();
+      data.forEach((r) => {
+        if (r.end - r.start < MIN_DURATION) return;
+        this.wsRegions.addRegion({
+          id: r.id,
+          start: r.start,
+          end: r.end,
+          content: r.chord_symbol,
+          color:
+            r.id === this.selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
+          drag: true,
+          resize: true,
+        });
       });
-    });
+    }
   }
 
   addRegion(chordName: string) {
+    if (!this.isReady) return;
     const t = this.ws.getCurrentTime();
-    // Overlap check
     const inside = this.wsRegions
       .getRegions()
       .find((r) => t >= r.start && t < r.end);
@@ -188,13 +229,13 @@ export class WaveformController {
       content: chordName,
       color: COLOR_SELECTED,
     });
-
     this.onRegionChange({
       id: r.id,
       start: r.start,
       end: r.end,
       content: chordName,
     });
+    this.selectRegion(r.id);
   }
 
   updateRegionContent(id: string, content: string, octave: number) {
@@ -211,14 +252,24 @@ export class WaveformController {
     }
   }
 
-  // --- Navigation & Shortcuts ---
+  // --- Shortcuts ---
 
   handleShortcut(e: KeyboardEvent) {
     const SHIFT_JUMP = 5.0;
     const NORMAL_JUMP = 0.5;
     const jump = e.shiftKey ? SHIFT_JUMP : NORMAL_JUMP;
 
-    // Boundary Logic
+    // DELETE / BACKSPACE
+    if (
+      this.selectedRegionId &&
+      (e.key === "Delete" || e.key === "Backspace")
+    ) {
+      e.preventDefault();
+      this.deleteRegion(this.selectedRegionId);
+      return;
+    }
+
+    // NAVIGATION
     const getBoundaries = () => {
       const times = this.wsRegions
         .getRegions()
@@ -227,8 +278,8 @@ export class WaveformController {
     };
 
     if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
-      if (e.altKey) {
-        // Jump to prev boundary
+      if (e.ctrlKey) {
+        // Changed to CTRL per request
         const bounds = getBoundaries();
         const prev = bounds.reverse().find((t) => t < this.currentTime - 0.05);
         this.ws.setTime(prev !== undefined ? prev : 0);
@@ -236,8 +287,8 @@ export class WaveformController {
         this.ws.setTime(Math.max(0, this.currentTime - jump));
       }
     } else if (e.key === "ArrowRight" || e.key.toLowerCase() === "l") {
-      if (e.altKey) {
-        // Jump to next boundary
+      if (e.ctrlKey) {
+        // Changed to CTRL per request
         const bounds = getBoundaries();
         const next = bounds.find((t) => t > this.currentTime + 0.05);
         this.ws.setTime(next !== undefined ? next : this.duration);
@@ -250,9 +301,10 @@ export class WaveformController {
     }
   }
 
-  // --- Internal Helpers ---
+  // --- Helpers ---
 
   private selectRegion(id: string | null) {
+    this.selectedRegionId = id;
     this.wsRegions
       .getRegions()
       .forEach((r) =>
@@ -265,10 +317,12 @@ export class WaveformController {
       .getRegions()
       .filter((r) => r.id !== region.id);
     let modified = false;
+
     for (const other of others) {
       if (region.start < other.end && region.end > other.start) {
         const myCenter = (region.start + region.end) / 2;
         const otherCenter = (other.start + other.end) / 2;
+
         if (myCenter < otherCenter) {
           region.end = other.start;
           if (region.end - region.start < MIN_DURATION)
