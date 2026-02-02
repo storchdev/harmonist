@@ -1,328 +1,109 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
-  import WaveSurfer from "wavesurfer.js";
-  import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
-  import type { ChordRegion, RegionChangeEvent } from "../types";
-  import { ChordPlayer } from "../lib/ChordPlayer";
+  import { onMount } from "svelte";
+  import { WaveformController } from "../lib/WaveformController.svelte";
+  import { Api } from "../lib/api";
+  import type { ChordRegion } from "../types";
   import { Chord } from "@tonaljs/tonal";
 
-  // --- Props ---
-  let {
-    audioUrl = "",
-    regionsData = [],
-    onRegionChange,
-  } = $props<{
-    audioUrl?: string;
-    regionsData?: ChordRegion[];
-    onRegionChange?: (
-      event: RegionChangeEvent | { action: "delete"; id: string },
-    ) => void;
+  let { audioUrl, regionsData, onRegionChange } = $props<{
+    audioUrl: string;
+    regionsData: ChordRegion[];
+    onRegionChange: (e: any) => void;
   }>();
 
-  // --- State ---
-  let wavesurfer = $state<WaveSurfer | undefined>(undefined);
-  let wsRegions = $state<RegionsPlugin | undefined>(undefined);
-  let container = $state<HTMLElement | undefined>(undefined);
+  let container = $state<HTMLElement>();
+  let controller = $state<WaveformController>();
 
-  let isReady = $state(false);
-  let zoomLevel = $state(50);
-  let isDragging = $state(false);
-
-  // AI Inspection State
+  // UI States
   let aiResult = $state<{ notes: string[]; name: string } | null>(null);
-
-  let selectedRegionId = $state<string | null>(null);
+  let editState = $state<{ id: string; value: string; octave: number } | null>(
+    null,
+  );
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
     null,
   );
+  let currentZoom = $state(50);
 
-  let player = new ChordPlayer();
-  let lastTime = 0;
-
-  // Edit State
-  let isEditing = $state(false);
-  let editValue = $state("");
-  let editId = $state<string | null>(null);
-  let editInputRef = $state<HTMLInputElement | undefined>(undefined);
+  // Validation State
   let isInvalid = $state(false);
-  let editOctave = $state(4);
-
-  const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
-  const COLOR_SELECTED = "rgba(239, 68, 68, 0.4)";
-  const MIN_DURATION = 0.1;
-
-  // --- Lifecycle ---
 
   onMount(() => {
     if (!container) return;
 
-    const ws = WaveSurfer.create({
-      container: container,
-      waveColor: "#4b5563",
-      progressColor: "#3b82f6",
-      height: 128,
-      normalize: true,
-      minPxPerSec: zoomLevel,
+    controller = new WaveformController(container, {
+      onRegionChange: (e) => onRegionChange(e),
+      onUserInteraction: () => {
+        aiResult = null;
+        contextMenu = null;
+      },
+      onShowContextMenu: (e, id) => {
+        contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
+      },
+      onEditRegion: (id) => startEditing(id),
     });
 
-    const regions = ws.registerPlugin(RegionsPlugin.create());
-
-    // --- Events ---
-
-    ws.on("decode", () => {
-      isReady = true;
-    });
-
-    // 1. Clear AI Popup on movement
-    ws.on("play", () => (aiResult = null));
-    ws.on("seeking", () => (aiResult = null));
-
-    ws.on("audioprocess", (currentTime) => {
-      if (!ws.isPlaying()) return;
-      const activeRegions = regions.getRegions().filter((r) => {
-        return r.start >= lastTime + 0.1 && r.start <= currentTime + 0.1;
-      });
-
-      activeRegions.forEach((r) => {
-        const cleanData = regionsData.find((d) => d.id === r.id);
-        if (cleanData) {
-          const duration = r.end - r.start;
-          if (duration < 0.05) return;
-          player.playChord(
-            cleanData.chord_symbol,
-            duration,
-            cleanData.octave || 4,
-          );
-        }
-      });
-      lastTime = currentTime;
-    });
-
-    ws.on("play", () => player.ensureReady());
-    ws.on("pause", () => player.stopAll());
-    ws.on("seeking", (t) => {
-      lastTime = t;
-      player.stopAll();
-    });
-
-    // --- DRAG / COLLISION LOGIC ---
-
-    regions.on("region-updated", (region) => {
-      isDragging = true;
-
-      const others = regions.getRegions().filter((r) => r.id !== region.id);
-      let modified = false;
-
-      for (const other of others) {
-        if (region.start < other.end && region.end > other.start) {
-          const myCenter = (region.start + region.end) / 2;
-          const otherCenter = (other.start + other.end) / 2;
-
-          if (myCenter < otherCenter) {
-            region.end = other.start;
-            if (region.end - region.start < MIN_DURATION) {
-              region.start = region.end - MIN_DURATION;
-            }
-          } else {
-            region.start = other.end;
-            if (region.end - region.start < MIN_DURATION) {
-              region.end = region.start + MIN_DURATION;
-            }
-          }
-          modified = true;
-        }
-      }
-
-      if (modified) {
-        region.setOptions({ start: region.start, end: region.end });
-      }
-
-      const originalData = regionsData.find((d) => d.id === region.id);
-      const contentSafe = originalData ? originalData.chord_symbol : "";
-
-      if (onRegionChange && originalData) {
-        onRegionChange({
-          id: region.id,
-          start: region.start,
-          end: region.end,
-          content: contentSafe,
-          octave: originalData.octave, // preserve octave
-        });
-      }
-    });
-
-    ws.on("interaction", () => {
-      setTimeout(() => {
-        isDragging = false;
-      }, 100);
-    });
-
-    regions.on("region-clicked", (region, e) => {
-      e.stopPropagation();
-      isDragging = false;
-      selectRegion(region.id);
-    });
-
-    regions.on("region-double-clicked", (region, e) => {
-      e.stopPropagation();
-      startEditing(region.id);
-    });
-
-    regions.on("region-created", (region) => {
-      if (region.element) {
-        region.element.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          selectRegion(region.id);
-          contextMenu = { x: e.clientX, y: e.clientY, regionId: region.id };
-        });
-      }
-    });
-
-    ws.on("click", () => selectRegion(null));
-
-    wavesurfer = ws;
-    wsRegions = regions;
-
-    return () => {
-      player.stopAll();
-      ws.destroy();
-    };
-  });
-
-  // --- Reactivity ---
-
-  $effect(() => {
-    if (wavesurfer && audioUrl) {
-      isReady = false;
-      wavesurfer.load(audioUrl).catch((err) => {
-        if (err.name !== "AbortError") console.error(err);
-      });
-    }
+    return () => controller?.destroy();
   });
 
   $effect(() => {
-    if (wsRegions && regionsData && isReady && !isEditing && !isDragging) {
-      const visualCount = wsRegions.getRegions().length;
-      if (visualCount !== regionsData.length || visualCount === 0) {
-        renderVisualRegions();
-      }
-    }
+    if (controller && audioUrl) controller.load(audioUrl);
   });
-
   $effect(() => {
-    if (wavesurfer && isReady) {
-      wavesurfer.zoom(zoomLevel);
-    }
+    if (controller && controller.isReady && regionsData)
+      controller.syncRegions(regionsData);
   });
 
-  function renderVisualRegions() {
-    if (!wsRegions || !regionsData) return;
-    wsRegions.clearRegions();
-    regionsData.forEach((r) => {
-      if (r.end - r.start < MIN_DURATION) return;
-      wsRegions!.addRegion({
-        id: r.id,
-        start: r.start,
-        end: r.end,
-        content: r.chord_symbol,
-        color: r.id === selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
-        drag: true,
-        resize: true,
-      });
-    });
-  }
+  // Public Actions
+  export const playPause = () => controller?.playPause();
+  export const addRegionAtCurrentTime = (c: string) => controller?.addRegion(c);
+  export const setSynthVolume = (v: number) => controller?.setSynthVolume(v);
+  export const setOscillator = (t: string) => controller?.setOscillator(t);
 
-  // --- AI Logic ---
-
-  export async function askAiForChord(settings?: {
-    onset: number;
-    frame: number;
-    minNoteLen: number;
-  }) {
-    if (!wavesurfer || !audioUrl) return;
-
-    const currentTime = wavesurfer.getCurrentTime();
-    const filename = audioUrl.split("/").pop();
-    if (!filename) return;
-
-    // BUILD QUERY STRING
-    let query = `filename=${filename}&time=${currentTime}`;
-    if (settings) {
-      query += `&onset=${settings.onset}&frame=${settings.frame}&min_note_len=${settings.minNoteLen}`;
-    }
-
+  export async function askAiForChord(settings: any) {
+    if (!audioUrl || !controller) return;
+    const time = controller.getCurrentTime();
+    const filename = audioUrl.split("/").pop()!;
     try {
-      const res = await fetch(
-        `http://127.0.0.1:5000/api/identify_chord?${query}`,
-      );
-      const data = await res.json();
-
-      // ... rest of the function remains identical ...
-      if (data.notes && data.notes.length > 0) {
-        const potentialChords = Chord.detect(data.notes);
-        const name =
-          potentialChords.length > 0 ? potentialChords[0] : "Unknown Shape";
-        aiResult = { notes: data.notes, name: name };
-      } else {
-        aiResult = { notes: [], name: "Silence / No Chord" };
-      }
-    } catch (err) {
-      console.error("AI Error:", err);
-      aiResult = null;
+      const data = await Api.audio.identifyChord(filename, time, settings);
+      const name = data.notes.length
+        ? Chord.detect(data.notes)[0] || "Unknown"
+        : "Silence";
+      aiResult = { notes: data.notes, name };
+    } catch (e) {
+      console.error(e);
     }
   }
 
-  // --- Helpers ---
-
-  function selectRegion(id: string | null) {
-    selectedRegionId = id;
-    contextMenu = null;
-    if (!wsRegions) return;
-    wsRegions.getRegions().forEach((r) => {
-      r.setOptions({ color: r.id === id ? COLOR_SELECTED : COLOR_DEFAULT });
-    });
+  function handleKeyDown(e: KeyboardEvent) {
+    if (editState) {
+      if (e.key === "Enter") saveEdit(); // Quick save
+      return;
+    }
+    controller?.handleShortcut(e);
   }
 
-  // --- Editing ---
-
-  async function startEditing(id: string) {
-    const sourceData = regionsData.find((r) => r.id === id);
-    if (!sourceData) return;
-    editId = id;
-    editValue = sourceData.chord_symbol;
-    editOctave = sourceData.octave || 4;
-    isEditing = true;
-    isInvalid = false;
+  function startEditing(id: string) {
+    const r = regionsData.find((reg) => reg.id === id);
+    if (!r) return;
+    editState = { id, value: r.chord_symbol, octave: r.octave || 4 };
+    isInvalid = false; // Reset error
     contextMenu = null;
-    await tick();
-    editInputRef?.focus();
-    editInputRef?.select();
   }
 
   function saveEdit() {
-    if (!editId || !wsRegions) return;
+    if (!editState || !controller) return;
 
-    // VALIDATION
+    // --- Validation Logic ---
     let isValid = true;
-    const cleanValue = editValue.trim();
+    const cleanValue = editState.value.trim();
 
     if (cleanValue.includes("/")) {
       const parts = cleanValue.split("/");
       const parsedChord = Chord.get(parts[0]);
-      // Tonal's Note.get returns { empty: boolean }
-      // We must ensure the bass note is valid, not empty
-      // Tonal < 3.0 uses .empty, newer might use .isEmpty.
-      // Note.get("C") -> { name: "C", ... empty: false }
-      const parsedBass = Chord.get(parts[1]); // Trick: Chord.get works on single notes too or use Note.get logic if imported
+      // Tonal doesn't strictly separate Note.get and Chord.get for simple validation
+      const parsedBass = Chord.get(parts[1]);
 
-      // Actually, let's stick to the previous robust Note check via Chord or simple regex if Import is tricky.
-      // But since we removed Note import in this specific snippet to keep it clean, let's use Chord.get for safety
-      if (
-        parsedChord.empty ||
-        !parsedChord.tonic ||
-        Chord.get(parts[1]).empty
-      ) {
+      if (parsedChord.empty || !parsedChord.tonic || parsedBass.empty) {
         isValid = false;
       }
     } else {
@@ -334,173 +115,16 @@
       isInvalid = true;
       return;
     }
+    // ------------------------
 
-    const region = wsRegions.getRegions().find((r) => r.id === editId);
-    if (region) {
-      region.setOptions({ content: cleanValue });
-      if (onRegionChange) {
-        onRegionChange({
-          id: region.id,
-          start: region.start,
-          end: region.end,
-          content: cleanValue,
-          octave: editOctave,
-        });
-      }
-    }
-    closeEdit();
+    controller.updateRegionContent(editState.id, cleanValue, editState.octave);
+    editState = null;
   }
 
-  function closeEdit() {
-    isEditing = false;
-    editId = null;
-  }
-
-  function deleteRegion(id: string) {
-    if (onRegionChange) onRegionChange({ action: "delete", id: id });
-    selectRegion(null);
-  }
-
-  // --- Global Inputs ---
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    ) {
-      if (!isEditing) return;
-    }
-
-    if (isEditing) {
-      if (e.key === "Enter") saveEdit();
-      if (e.key === "Escape") closeEdit();
-      e.stopPropagation();
-      return;
-    }
-
-    const SHIFT_JUMP = 5.0;
-    const NORMAL_JUMP = 0.5;
-    const jumpAmount = e.shiftKey ? SHIFT_JUMP : NORMAL_JUMP;
-
-    // Helper: All Boundaries
-    const getBoundaries = () => {
-      if (!wsRegions) return [];
-      const times = wsRegions.getRegions().flatMap((r) => [r.start, r.end]);
-      return [...new Set(times)].sort((a, b) => a - b);
-    };
-
-    // LEFT / H
-    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
-      if (wavesurfer) {
-        if (e.key === "ArrowLeft") e.preventDefault();
-
-        if (e.altKey && wsRegions) {
-          const currentTime = wavesurfer.getCurrentTime();
-          const boundaries = getBoundaries();
-          const prev = boundaries.reverse().find((t) => t < currentTime - 0.05);
-          if (prev !== undefined) wavesurfer.setTime(prev);
-          else wavesurfer.setTime(0);
-        } else {
-          const time = Math.max(0, wavesurfer.getCurrentTime() - jumpAmount);
-          wavesurfer.setTime(time);
-        }
-      }
-    }
-
-    // RIGHT / L
-    if (e.key === "ArrowRight" || e.key.toLowerCase() === "l") {
-      if (wavesurfer) {
-        if (e.key === "ArrowRight") e.preventDefault();
-
-        if (e.altKey && wsRegions) {
-          const currentTime = wavesurfer.getCurrentTime();
-          const boundaries = getBoundaries();
-          const next = boundaries.find((t) => t > currentTime + 0.05);
-          if (next !== undefined) wavesurfer.setTime(next);
-          else wavesurfer.setTime(wavesurfer.getDuration());
-        } else {
-          const time = Math.min(
-            wavesurfer.getDuration(),
-            wavesurfer.getCurrentTime() + jumpAmount,
-          );
-          wavesurfer.setTime(time);
-        }
-      }
-    }
-
-    if (e.code === "Space") {
-      e.preventDefault();
-      wavesurfer?.playPause();
-      return;
-    }
-
-    if (e.code === "KeyM") {
-      addRegionAtCurrentTime("C");
-      return;
-    }
-
-    if (selectedRegionId) {
-      if (e.key === "Delete" || e.key === "Backspace")
-        deleteRegion(selectedRegionId);
-      if (e.key === "Enter") startEditing(selectedRegionId);
-    }
-  }
-
-  // --- Exports ---
-
-  export function playPause() {
-    wavesurfer?.playPause();
-  }
-  export function setSynthVolume(val: number) {
-    player.setVolume(val);
-  }
-  export function setOscillator(type: any) {
-    player.setOscillatorType(type);
-  }
-
-  export function addRegionAtCurrentTime(chordName: string) {
-    if (!wavesurfer || !wsRegions) return;
-
-    if (regionsData.length > 0 && wsRegions.getRegions().length === 0) {
-      renderVisualRegions();
-    }
-
-    const currentTime = wavesurfer.getCurrentTime();
-    const regions = wsRegions.getRegions().sort((a, b) => a.start - b.start);
-
-    const inside = regions.find(
-      (r) => currentTime >= r.start && currentTime < r.end - 0.01,
-    );
-    if (inside) {
-      selectRegion(inside.id);
-      return;
-    }
-
-    let duration = 2.0;
-    const nextRegion = regions.find((r) => r.start > currentTime);
-    if (nextRegion) {
-      const gap = nextRegion.start - currentTime;
-      if (gap < MIN_DURATION) return;
-      duration = Math.min(duration, gap);
-    }
-
-    const newRegion = wsRegions.addRegion({
-      start: currentTime,
-      end: currentTime + duration,
-      content: chordName,
-      color: COLOR_SELECTED,
-      drag: true,
-      resize: true,
-    });
-    selectRegion(newRegion.id);
-
-    if (onRegionChange) {
-      onRegionChange({
-        id: newRegion.id,
-        start: newRegion.start,
-        end: newRegion.end,
-        content: chordName,
-      });
+  function handleDeleteContext() {
+    if (contextMenu && controller) {
+      controller.deleteRegion(contextMenu.regionId);
+      contextMenu = null;
     }
   }
 </script>
@@ -508,7 +132,7 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <div
-  class="w-full bg-gray-900 rounded-lg p-4 shadow-inner relative flex flex-col gap-2"
+  class="relative w-full bg-gray-900 rounded-lg p-4 shadow-inner flex flex-col gap-2"
 >
   <div bind:this={container} class="w-full min-h-[128px]"></div>
 
@@ -518,7 +142,8 @@
       type="range"
       min="10"
       max="300"
-      bind:value={zoomLevel}
+      bind:value={currentZoom}
+      oninput={() => controller?.setZoom(currentZoom)}
       class="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
     />
   </div>
@@ -542,9 +167,10 @@
     </div>
   {/if}
 
-  {#if isEditing}
+  {#if editState}
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onclick={(e) => e.stopPropagation()}
     >
       <div
         class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-600 w-80"
@@ -556,14 +182,13 @@
             >Symbol</label
           >
           <input
-            bind:this={editInputRef}
-            bind:value={editValue}
+            bind:value={editState.value}
             oninput={() => (isInvalid = false)}
-            class="w-full bg-gray-900 border rounded p-2 text-white outline-none transition-colors
-                     {isInvalid
-              ? 'border-red-500 focus:ring-2 focus:ring-red-500'
+            class="w-full bg-gray-900 border rounded p-2 text-white outline-none transition-colors {isInvalid
+              ? 'border-red-500 ring-1 ring-red-500'
               : 'border-gray-600 focus:ring-2 focus:ring-blue-500'}"
             placeholder="e.g. Cm7"
+            autofocus
           />
           {#if isInvalid}
             <p class="text-red-400 text-xs mt-1">Invalid chord name</p>
@@ -575,14 +200,16 @@
             <label class="text-xs text-gray-400 uppercase font-bold"
               >Octave</label
             >
-            <span class="text-xs text-blue-400 font-bold">{editOctave}</span>
+            <span class="text-xs text-blue-400 font-bold"
+              >{editState.octave}</span
+            >
           </div>
           <input
             type="range"
             min="2"
             max="6"
             step="1"
-            bind:value={editOctave}
+            bind:value={editState.octave}
             class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
           />
         </div>
@@ -590,7 +217,7 @@
         <div class="flex justify-end gap-2">
           <button
             class="px-3 py-1 text-sm text-gray-400 hover:text-white"
-            onclick={closeEdit}>Cancel</button
+            onclick={() => (editState = null)}>Cancel</button
           >
           <button
             class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -603,22 +230,20 @@
 
   {#if contextMenu}
     <div
-      class="fixed bg-gray-800 border border-gray-600 shadow-xl rounded z-50 text-sm flex flex-col py-1"
+      class="fixed bg-gray-800 border border-gray-600 shadow-xl rounded z-[100] text-sm flex flex-col py-1 min-w-[120px]"
       style="top: {contextMenu.y}px; left: {contextMenu.x}px"
     >
       <button
         class="px-4 py-2 hover:bg-gray-700 text-left text-white"
-        onclick={() => {
-          if (contextMenu) startEditing(contextMenu.regionId);
-        }}>Edit Chord</button
+        onclick={() => startEditing(contextMenu!.regionId)}>Edit Chord</button
       >
       <button
         class="px-4 py-2 hover:bg-red-900/50 text-left text-red-300"
-        onclick={() => deleteRegion(contextMenu!.regionId)}>Delete</button
+        onclick={handleDeleteContext}>Delete</button
       >
     </div>
     <div
-      class="fixed inset-0 z-40"
+      class="fixed inset-0 z-[99]"
       onclick={() => (contextMenu = null)}
       oncontextmenu={(e) => {
         e.preventDefault();
