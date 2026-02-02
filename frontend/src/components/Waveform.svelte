@@ -22,6 +22,7 @@
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
     null,
   );
+  let currentZoom = $state(50);
 
   // Validation State
   let isInvalid = $state(false);
@@ -141,7 +142,8 @@
       type="range"
       min="10"
       max="300"
-      oninput={(e) => controller?.setZoom(Number(e.currentTarget.value))}
+      bind:value={currentZoom}
+      oninput={() => controller?.setZoom(currentZoom)}
       class="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
     />
   </div>

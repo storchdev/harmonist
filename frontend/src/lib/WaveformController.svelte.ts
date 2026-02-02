@@ -11,6 +11,7 @@ export class WaveformController {
   private ws: WaveSurfer;
   private wsRegions: RegionsPlugin;
   private player: ChordPlayer;
+  private zoomLevel = 50;
 
   // Callbacks
   private onRegionChange: (event: any) => void;
@@ -57,6 +58,24 @@ export class WaveformController {
 
     this.setupAudioEvents();
     this.setupRegionEvents();
+    this.setupScrollZoom(container);
+  }
+
+  private setupScrollZoom(container: HTMLElement) {
+    container.addEventListener(
+      "wheel",
+      (e) => {
+        if (e.ctrlKey) return; // Allow browser zoom if ctrl held (optional)
+        e.preventDefault();
+
+        // Zoom Sensitivity
+        const delta = e.deltaY > 0 ? -10 : 10;
+        this.zoomLevel = Math.max(10, Math.min(300, this.zoomLevel + delta));
+
+        this.ws.zoom(this.zoomLevel);
+      },
+      { passive: false },
+    );
   }
 
   // ... setupAudioEvents() remains the same ...
@@ -255,52 +274,100 @@ export class WaveformController {
   // --- Shortcuts ---
 
   handleShortcut(e: KeyboardEvent) {
-    const SHIFT_JUMP = 5.0;
-    const NORMAL_JUMP = 0.5;
-    const jump = e.shiftKey ? SHIFT_JUMP : NORMAL_JUMP;
+    const isLeft = e.key === "ArrowLeft" || e.key.toLowerCase() === "h";
+    const isRight = e.key === "ArrowRight" || e.key.toLowerCase() === "l";
+    const isSpace = e.code === "Space";
+    const isDelete = e.key === "Delete" || e.key === "Backspace";
 
-    // DELETE / BACKSPACE
-    if (
-      this.selectedRegionId &&
-      (e.key === "Delete" || e.key === "Backspace")
-    ) {
+    if (isSpace) {
+      e.preventDefault();
+      this.playPause();
+      return;
+    }
+
+    // 1. REGION EDITING MODE (When a region is selected)
+    if (this.selectedRegionId && (isLeft || isRight)) {
+      e.preventDefault();
+      const direction = isLeft ? -1 : 1;
+
+      if (e.ctrlKey) {
+        // SELECT PREV/NEXT
+        this.selectNeighborRegion(direction);
+      } else if (e.shiftKey) {
+        // EXTEND/SHRINK (Resize right edge)
+        this.resizeSelectedRegion(direction);
+      } else {
+        // MOVE (Nudge position)
+        this.moveSelectedRegion(direction);
+      }
+      return;
+    }
+
+    // 2. GLOBAL NAVIGATION MODE (No region selected or different keys)
+    if (this.selectedRegionId && isDelete) {
       e.preventDefault();
       this.deleteRegion(this.selectedRegionId);
       return;
     }
 
-    // NAVIGATION
-    const getBoundaries = () => {
-      const times = this.wsRegions
-        .getRegions()
-        .flatMap((r) => [r.start, r.end]);
-      return [...new Set(times)].sort((a, b) => a - b);
-    };
-
-    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
-      if (e.ctrlKey) {
-        // Changed to CTRL per request
-        const bounds = getBoundaries();
-        const prev = bounds.reverse().find((t) => t < this.currentTime - 0.05);
-        this.ws.setTime(prev !== undefined ? prev : 0);
-      } else {
-        this.ws.setTime(Math.max(0, this.currentTime - jump));
-      }
-    } else if (e.key === "ArrowRight" || e.key.toLowerCase() === "l") {
-      if (e.ctrlKey) {
-        // Changed to CTRL per request
-        const bounds = getBoundaries();
-        const next = bounds.find((t) => t > this.currentTime + 0.05);
-        this.ws.setTime(next !== undefined ? next : this.duration);
-      } else {
-        this.ws.setTime(Math.min(this.duration, this.currentTime + jump));
-      }
-    } else if (e.code === "Space") {
-      e.preventDefault();
-      this.playPause();
+    // Global seeking (only if NOT holding Ctrl/Shift which are now reserved for regions)
+    if (!e.ctrlKey && !e.shiftKey && (isLeft || isRight)) {
+      const jump = 0.5; // Simple seek
+      const direction = isLeft ? -1 : 1;
+      const target = Math.max(
+        0,
+        Math.min(this.duration, this.currentTime + jump * direction),
+      );
+      this.ws.setTime(target);
     }
   }
 
+  private selectNeighborRegion(direction: number) {
+    const sorted = this.wsRegions
+      .getRegions()
+      .sort((a, b) => a.start - b.start);
+    const currentIdx = sorted.findIndex((r) => r.id === this.selectedRegionId);
+
+    if (currentIdx === -1) return;
+
+    const newIdx = currentIdx + direction;
+    if (newIdx >= 0 && newIdx < sorted.length) {
+      this.selectRegion(sorted[newIdx].id);
+      // Optional: Scroll to view?
+    }
+  }
+
+  private moveSelectedRegion(direction: number) {
+    const r = this.wsRegions
+      .getRegions()
+      .find((reg) => reg.id === this.selectedRegionId);
+    if (!r) return;
+
+    const step = 0.1; // 100ms nudge
+    const newStart = r.start + step * direction;
+    const duration = r.end - r.start;
+
+    // Check bounds (0 to max duration)
+    if (newStart < 0) return;
+
+    // Set options triggers our 'region-updated' listener which handles collisions
+    r.setOptions({ start: newStart, end: newStart + duration });
+  }
+
+  private resizeSelectedRegion(direction: number) {
+    const r = this.wsRegions
+      .getRegions()
+      .find((reg) => reg.id === this.selectedRegionId);
+    if (!r) return;
+
+    const step = 0.1;
+    let newEnd = r.end + step * direction;
+
+    // Prevent duration < MIN_DURATION
+    if (newEnd - r.start < 0.1) newEnd = r.start + 0.1;
+
+    r.setOptions({ end: newEnd });
+  }
   // --- Helpers ---
 
   private selectRegion(id: string | null) {
