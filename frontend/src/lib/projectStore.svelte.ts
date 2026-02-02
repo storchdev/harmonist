@@ -27,6 +27,44 @@ export class ProjectStore {
     await Api.projects.save(this.current.id, this.current);
   }
 
+  // --- NEW: Download JSON ---
+  download() {
+    if (!this.current) return;
+    const json = JSON.stringify(this.current, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${this.current.name.replace(/\s+/g, "_")}_${this.current.id.slice(0, 4)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // --- NEW: Import JSON ---
+  async importFile(file: File) {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as ProjectData;
+
+      // Basic validation
+      if (!data.id || !Array.isArray(data.regions)) {
+        throw new Error("Invalid project JSON structure");
+      }
+
+      // Load into state immediately
+      this.current = data;
+
+      // Optional: Auto-save to persist this imported project to backend immediately?
+      // For now, we just load it into memory. User must click "Save" to persist.
+    } catch (e) {
+      console.error("Failed to import project:", e);
+      alert("Error parsing JSON file");
+    }
+  }
+
   updateRegion(e: RegionChangeEvent | { action: "delete"; id: string }) {
     if (!this.current) return;
 

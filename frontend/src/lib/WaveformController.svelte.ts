@@ -35,7 +35,6 @@ export class WaveformController {
     this.onUserInteraction = callbacks.onUserInteraction;
     this.player = new ChordPlayer();
 
-    // 1. Init WaveSurfer
     this.ws = WaveSurfer.create({
       container,
       waveColor: "#4b5563",
@@ -45,18 +44,14 @@ export class WaveformController {
       minPxPerSec: 50,
     });
 
-    // 2. Init Modules
     this.regions = new RegionManager(this.ws, callbacks);
     this.input = new InputManager(this, container);
 
-    // 3. Setup Audio Engine
     this.setupAudioEvents();
 
-    // 4. Click on blank space deselects
+    // Deselect on blank click
     this.ws.on("click", () => this.regions.select(null));
   }
-
-  // --- Audio Engine ---
 
   private setupAudioEvents() {
     this.ws.on("decode", () => {
@@ -68,6 +63,28 @@ export class WaveformController {
       this.isPlaying = true;
       this.player.ensureReady();
       this.onUserInteraction();
+
+      // [FIX] Stop previous voices to prevent distortion/stacking
+      this.player.stopAll();
+
+      // [FIX] Resume synth if starting inside a region
+      const t = this.ws.getCurrentTime();
+      const currentRegion = this.regions
+        .getAll()
+        .find((r) => t >= r.start && t < r.end);
+
+      if (currentRegion) {
+        const data = this.regionsCache.find(
+          (cache) => cache.id === currentRegion.id,
+        );
+        if (data) {
+          const remaining = currentRegion.end - t;
+          // Guard against extremely short durations which cause "Quiet/Clicky" envelopes
+          if (remaining > 0.05) {
+            this.player.playChord(data.chord_symbol, remaining, 4);
+          }
+        }
+      }
     });
 
     this.ws.on("pause", () => {
@@ -84,9 +101,10 @@ export class WaveformController {
 
     this.ws.on("timeupdate", (t) => (this.currentTime = t));
 
-    // Playback Loop
     this.ws.on("audioprocess", (t) => {
       if (!this.ws.isPlaying()) return;
+
+      // Look for regions starting in this time slice
       const active = this.regions
         .getAll()
         .filter((r) => r.start >= this.lastTime + 0.1 && r.start <= t + 0.1);
@@ -101,7 +119,7 @@ export class WaveformController {
     });
   }
 
-  // --- Public API (Delegates) ---
+  // --- Public API ---
 
   async load(url: string) {
     this.isReady = false;
@@ -117,7 +135,6 @@ export class WaveformController {
     this.ws.destroy();
   }
 
-  // Regions
   syncRegions(data: ChordRegion[]) {
     this.regionsCache = data;
     if (this.isReady) this.regions.sync(data);
@@ -145,7 +162,6 @@ export class WaveformController {
     return this.regions.selectedRegionId !== null;
   }
 
-  // Audio Controls
   playPause() {
     this.ws.playPause();
   }
@@ -159,7 +175,6 @@ export class WaveformController {
     this.player.setVolume(v);
   }
 
-  // Navigation
   seek(amount: number) {
     const target = Math.max(
       0,
@@ -191,7 +206,6 @@ export class WaveformController {
     this.ws.zoom(val);
   }
 
-  // Forward Keyboard Events from Svelte Window
   handleShortcut(e: KeyboardEvent) {
     this.input.handleKeyDown(e);
   }

@@ -12,6 +12,8 @@
   let aiSettings = $state({ onset: 0.6, frame: 0.4, minNoteLen: 100 });
   let isAiLoading = $state(false);
 
+  let importInput: HTMLInputElement;
+
   async function openLoadMenu() {
     projectList = await Api.projects.list();
     showLoadMenu = true;
@@ -25,6 +27,10 @@
     } finally {
       isAiLoading = false;
     }
+  }
+
+  function handleImportClick() {
+    importInput.click();
   }
 </script>
 
@@ -42,6 +48,21 @@
         class="bg-gray-600 px-6 py-3 rounded-lg hover:bg-gray-700 font-semibold"
         onclick={openLoadMenu}>Load Existing</button
       >
+
+      <button
+        class="border border-gray-500 px-6 py-3 rounded-lg hover:bg-gray-800 font-semibold text-gray-300"
+        onclick={handleImportClick}
+      >
+        Import JSON
+      </button>
+      <input
+        bind:this={importInput}
+        type="file"
+        accept=".json"
+        class="hidden"
+        onchange={(e) =>
+          projectStore.importFile((e.target as HTMLInputElement).files![0])}
+      />
     </div>
 
     {#if showLoadMenu}
@@ -115,6 +136,13 @@
       </div>
 
       <div class="flex-grow"></div>
+
+      <button
+        class="bg-indigo-900/50 text-indigo-200 px-4 py-2 rounded hover:bg-indigo-900 border border-indigo-900/50 mr-2"
+        onclick={() => projectStore.download()}
+      >
+        Download JSON
+      </button>
 
       <button
         class="bg-green-600 px-4 py-2 rounded hover:bg-green-700 shadow-lg"

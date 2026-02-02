@@ -5,7 +5,6 @@ export class InputManager {
 
   constructor(controller: WaveformController, container: HTMLElement) {
     this.controller = controller;
-    this.setupKeyboard();
     this.setupScrollZoom(container);
   }
 
@@ -23,6 +22,15 @@ export class InputManager {
   }
 
   public handleKeyDown(e: KeyboardEvent) {
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
     const isLeft = e.key === "ArrowLeft" || e.key.toLowerCase() === "h";
     const isRight = e.key === "ArrowRight" || e.key.toLowerCase() === "l";
     const isSpace = e.code === "Space";
@@ -34,15 +42,21 @@ export class InputManager {
       return;
     }
 
-    // Delegate to Controller to check state (Selected Region vs Global)
+    // 1. REGION MODE (Precise Editing)
     if (this.controller.hasSelectedRegion()) {
       if (isLeft || isRight) {
         e.preventDefault();
         const dir = isLeft ? -1 : 1;
-        if (e.ctrlKey) this.controller.regions.selectNeighbor(dir);
-        else if (e.shiftKey)
+
+        if (e.ctrlKey) {
+          this.controller.regions.selectNeighbor(dir);
+        } else if (e.shiftKey) {
+          // Shift in Region Mode = Resize
           this.controller.regions.nudgeSelected(dir, "resize");
-        else this.controller.regions.nudgeSelected(dir, "move");
+        } else {
+          // Arrows in Region Mode = Move
+          this.controller.regions.nudgeSelected(dir, "move");
+        }
         return;
       }
 
@@ -53,20 +67,21 @@ export class InputManager {
       }
     }
 
-    // Global Navigation
-    if (!e.ctrlKey && !e.shiftKey && (isLeft || isRight)) {
+    // 2. GLOBAL MODE (Navigation)
+    // Applies when NO region is selected OR keys don't match region ops
+    if (isLeft || isRight) {
       const dir = isLeft ? -1 : 1;
-      this.controller.seek(0.5 * dir);
-    } else if (e.ctrlKey && (isLeft || isRight)) {
-      // Boundary Jump
-      const dir = isLeft ? -1 : 1;
-      this.controller.seekToBoundary(dir);
-    }
-  }
 
-  private setupKeyboard() {
-    // Svelte window binding usually calls handleKeyDown,
-    // but if we wanted self-contained, we'd add listener here.
-    // For this refactor, we expose handleKeyDown to be called by Svelte <svelte:window>
+      if (e.ctrlKey) {
+        // Ctrl = Boundary Jump
+        this.controller.seekToBoundary(dir);
+      } else if (e.shiftKey) {
+        // Shift = Small Step (NEW FEATURE)
+        this.controller.seek(0.05 * dir);
+      } else {
+        // Normal = Normal Seek
+        this.controller.seek(0.5 * dir);
+      }
+    }
   }
 }
