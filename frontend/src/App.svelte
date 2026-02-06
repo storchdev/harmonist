@@ -146,7 +146,10 @@
 
       <button
         class="bg-green-600 px-4 py-2 rounded hover:bg-green-700 shadow-lg"
-        onclick={() => projectStore.save()}>Save Project</button
+        onclick={() => {
+          projectStore.save();
+          alert("Saved project!");
+        }}>Save Project</button
       >
       <button
         class="bg-red-900/50 text-red-200 px-4 py-2 rounded hover:bg-red-900"
