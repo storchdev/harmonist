@@ -1,5 +1,5 @@
 import * as Tone from "tone";
-import { Chord, Note } from "@tonaljs/tonal";
+import { parseChordInput } from "./chordParsing";
 
 export class ChordPlayer {
   private synth: Tone.PolySynth;
@@ -37,24 +37,17 @@ export class ChordPlayer {
   playChord(chordName: string, duration: number, octave: number = 4) {
     if (!this.isReady) return;
 
-    let symbol = chordName;
-    let bassNote = null;
+    const parsed = parseChordInput(chordName);
+    if (!parsed.isValid || !parsed.chord) return;
 
-    if (chordName.includes("/")) {
-      const parts = chordName.split("/");
-      symbol = parts[0];
-      bassNote = parts[1];
-    }
-
-    const chord = Chord.get(symbol);
-    if (chord.empty) return;
+    const { chord, bassNote } = parsed;
 
     const notesToPlay: string[] = [];
 
     // 1. Bass Note (One octave lower than selected)
     const bassOctave = Math.max(0, octave - 1);
 
-    if (bassNote && !Note.get(bassNote).empty) {
+    if (bassNote) {
       notesToPlay.push(bassNote + bassOctave);
     } else {
       if (chord.tonic) notesToPlay.push(chord.tonic + bassOctave);

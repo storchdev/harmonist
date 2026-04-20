@@ -4,6 +4,7 @@
   import { Api } from "../lib/api";
   import type { ChordRegion } from "../types";
   import { Chord } from "@tonaljs/tonal";
+  import { parseChordInput } from "../lib/chordParsing";
 
   let { audioUrl, regionsData, onRegionChange } = $props<{
     audioUrl: string;
@@ -93,29 +94,13 @@
   function saveEdit() {
     if (!editState || !controller) return;
 
-    // --- Validation Logic ---
-    let isValid = true;
     const cleanValue = editState.value.trim();
+    const parsed = parseChordInput(cleanValue);
 
-    if (cleanValue.includes("/")) {
-      const parts = cleanValue.split("/");
-      const parsedChord = Chord.get(parts[0]);
-      // Tonal doesn't strictly separate Note.get and Chord.get for simple validation
-      const parsedBass = Chord.get(parts[1]);
-
-      if (parsedChord.empty || !parsedChord.tonic || parsedBass.empty) {
-        isValid = false;
-      }
-    } else {
-      const parsed = Chord.get(cleanValue);
-      if (parsed.empty || !parsed.tonic) isValid = false;
-    }
-
-    if (!isValid) {
+    if (!parsed.isValid) {
       isInvalid = true;
       return;
     }
-    // ------------------------
 
     controller.updateRegionContent(editState.id, cleanValue, editState.octave);
     editState = null;
