@@ -4,6 +4,12 @@ import { RegionManager } from "./RegionManager";
 import { InputManager } from "./InputManager";
 import type { ChordRegion } from "../types";
 
+export type WaveformScrollState = {
+  position: number;
+  max: number;
+  canScroll: boolean;
+};
+
 export class WaveformController {
   private ws: WaveSurfer;
   private player: ChordPlayer;
@@ -42,6 +48,7 @@ export class WaveformController {
       height: 128,
       normalize: true,
       minPxPerSec: 50,
+      hideScrollbar: true,
     });
 
     this.regions = new RegionManager(this.ws, callbacks);
@@ -204,6 +211,43 @@ export class WaveformController {
   setZoom(val: number) {
     this.zoomLevel = val;
     this.ws.zoom(val);
+  }
+
+  getScrollState(): WaveformScrollState {
+    const wrapper = this.ws.getWrapper();
+    const viewport = this.ws.getWidth();
+    const max = Math.max(0, wrapper.scrollWidth - viewport);
+    const position = Math.min(max, this.ws.getScroll());
+
+    return {
+      position,
+      max,
+      canScroll: max > 0,
+    };
+  }
+
+  setScrollPosition(pixels: number) {
+    const { max } = this.getScrollState();
+    const target = Math.max(0, Math.min(max, pixels));
+    this.ws.setScroll(target);
+  }
+
+  onScrollStateChange(callback: (state: WaveformScrollState) => void) {
+    const emit = () => callback(this.getScrollState());
+
+    const unsubscribers = [
+      this.ws.on("scroll", emit),
+      this.ws.on("zoom", emit),
+      this.ws.on("decode", emit),
+      this.ws.on("redrawcomplete", emit),
+      this.ws.on("resize", emit),
+    ];
+
+    emit();
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
   }
 
   handleShortcut(e: KeyboardEvent) {

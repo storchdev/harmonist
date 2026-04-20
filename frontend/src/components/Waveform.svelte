@@ -24,6 +24,9 @@
     null,
   );
   let currentZoom = $state(50);
+  let scrollPosition = $state(0);
+  let maxScroll = $state(1);
+  let canScroll = $state(false);
 
   // Validation State
   let isInvalid = $state(false);
@@ -43,7 +46,16 @@
       onEditRegion: (id) => startEditing(id),
     });
 
-    return () => controller?.destroy();
+    const unsubscribeScroll = controller.onScrollStateChange((state) => {
+      scrollPosition = state.position;
+      maxScroll = state.max > 0 ? state.max : 1;
+      canScroll = state.canScroll;
+    });
+
+    return () => {
+      unsubscribeScroll();
+      controller?.destroy();
+    };
   });
 
   $effect(() => {
@@ -124,16 +136,34 @@
 <div class="relative w-full panel panel-muted flex flex-col gap-3">
   <div bind:this={container} class="w-full min-h-[128px]"></div>
 
-  <div class="flex justify-end items-center gap-3 px-2">
-    <span class="micro-label">Zoom</span>
-    <input
-      type="range"
-      min="10"
-      max="300"
-      bind:value={currentZoom}
-      oninput={() => controller?.setZoom(currentZoom)}
-      class="range-control w-36"
-    />
+  <div class="waveform-controls">
+    <div class="control-row control-row-scroll">
+      <span class="micro-label">Timeline Scroll</span>
+      <input
+        type="range"
+        min="0"
+        max={maxScroll}
+        value={scrollPosition}
+        oninput={(e) =>
+          controller?.setScrollPosition(
+            Number((e.currentTarget as HTMLInputElement).value),
+          )}
+        class="range-control timeline-scroll-control"
+        disabled={!canScroll}
+      />
+    </div>
+
+    <div class="control-row control-row-zoom">
+      <span class="micro-label">Zoom</span>
+      <input
+        type="range"
+        min="10"
+        max="300"
+        bind:value={currentZoom}
+        oninput={() => controller?.setZoom(currentZoom)}
+        class="range-control zoom-control-compact"
+      />
+    </div>
   </div>
 
   {#if aiResult}

@@ -189,15 +189,16 @@ select {
 
 .file-input {
   font-size: 0.88rem;
+  padding: 0.62rem 0.78rem;
 }
 
 .file-input::file-selector-button {
-  margin-right: 0.65rem;
+  margin-right: 0.75rem;
   border: 0;
   border-radius: 999px;
   background: rgba(47, 80, 126, 0.12);
   color: #294f7b;
-  padding: 0.34rem 0.7rem;
+  padding: 0.42rem 0.82rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -213,6 +214,18 @@ select {
   font-weight: 700;
   background: rgba(36, 128, 87, 0.12);
   color: #26653e;
+}
+
+.audio-file-pill {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.78rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-pill.muted {
@@ -330,6 +343,93 @@ select {
 .range-control {
   width: 100%;
   accent-color: var(--accent);
+}
+
+.waveform-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.control-row-scroll .micro-label {
+  flex: 0 0 auto;
+}
+
+.timeline-scroll-control {
+  flex: 1;
+  height: 1.05rem;
+  appearance: none;
+  background: transparent;
+}
+
+.timeline-scroll-control:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.timeline-scroll-control::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(87, 72, 54, 0.2);
+  background: linear-gradient(
+    180deg,
+    rgba(225, 212, 193, 0.98),
+    rgba(210, 193, 170, 0.88)
+  );
+}
+
+.timeline-scroll-control::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 251, 243, 0.95);
+  background: linear-gradient(150deg, #46657d, #335163);
+  box-shadow: 0 2px 8px rgba(33, 24, 15, 0.26);
+  margin-top: -0.28rem;
+  cursor: grab;
+}
+
+.timeline-scroll-control:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.timeline-scroll-control::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(87, 72, 54, 0.2);
+  background: linear-gradient(
+    180deg,
+    rgba(225, 212, 193, 0.98),
+    rgba(210, 193, 170, 0.88)
+  );
+}
+
+.timeline-scroll-control::-moz-range-thumb {
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 251, 243, 0.95);
+  background: linear-gradient(150deg, #46657d, #335163);
+  box-shadow: 0 2px 8px rgba(33, 24, 15, 0.26);
+  cursor: grab;
+}
+
+.control-row-zoom {
+  justify-content: flex-end;
+}
+
+.zoom-control-compact {
+  width: 9.5rem;
+  max-width: 46vw;
+  flex: 0 0 auto;
 }
 
 .stage-panel {

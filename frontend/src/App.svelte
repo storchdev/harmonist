@@ -63,11 +63,10 @@
 
 <main class="app-shell">
   <header class="app-header">
-    <p class="eyebrow">Local first chord workspace</p>
+    <p class="eyebrow">Chord editor</p>
     <h1 class="app-title">Harmonist</h1>
     <p class="app-subtitle">
-      Analyze recordings, review AI chord suggestions, and shape your timeline in
-      a calm, consistent editing layout.
+      Upload audio, review AI chord suggestions, and edit your timeline.
     </p>
   </header>
 
@@ -155,7 +154,9 @@
         <div class="field-group">
           <span class="micro-label">Audio File</span>
           {#if projectStore.current.audio_file}
-            <span class="status-pill">{projectStore.current.audio_file}</span>
+            <span class="status-pill audio-file-pill"
+              >{projectStore.current.audio_file}</span
+            >
           {:else}
             <input
               type="file"
