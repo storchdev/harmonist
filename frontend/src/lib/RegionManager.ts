@@ -11,6 +11,52 @@ export class RegionManager {
   public selectedRegionId: string | null = null;
   private onRegionChange: (event: any) => void;
 
+  private readonly labelStyle: Partial<CSSStyleDeclaration> = {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "max-content",
+    maxWidth: "none",
+    pointerEvents: "none",
+    zIndex: "2",
+    border: "1px solid rgba(90, 66, 39, 0.38)",
+    borderRadius: "999px",
+    background: "rgba(255, 248, 235, 0.96)",
+    color: "#3f3023",
+    padding: "0.16rem 0.5rem",
+    fontSize: "0.78rem",
+    fontWeight: "800",
+    textAlign: "center",
+    letterSpacing: "0.01em",
+    lineHeight: "1.1",
+    boxShadow: "0 2px 8px rgba(62, 43, 24, 0.2)",
+    whiteSpace: "nowrap",
+  };
+
+  private createLabelElement(text: string) {
+    const label = document.createElement("span");
+    label.className = "region-label-chip";
+    label.textContent = text;
+    Object.assign(label.style, this.labelStyle);
+    return label;
+  }
+
+  private styleRegionElement(region: any, labelText?: string) {
+    if (region.element) {
+      region.element.classList.add("harmonist-region");
+      region.element.style.position = "absolute";
+      region.element.style.overflow = "visible";
+    }
+
+    const contentEl = (region as any).content;
+    if (contentEl instanceof HTMLElement) {
+      contentEl.classList.add("region-label-chip");
+      if (labelText !== undefined) contentEl.textContent = labelText;
+      Object.assign(contentEl.style, this.labelStyle);
+    }
+  }
+
   constructor(
     ws: WaveSurfer,
     callbacks: {
@@ -51,6 +97,8 @@ export class RegionManager {
     });
 
     this.wsRegions.on("region-created", (region) => {
+      this.styleRegionElement(region);
+
       if (region.element) {
         region.element.addEventListener("contextmenu", (e) => {
           e.preventDefault();
@@ -74,12 +122,20 @@ export class RegionManager {
           id: r.id,
           start: r.start,
           end: r.end,
-          content: r.chord_symbol,
+          content: this.createLabelElement(r.chord_symbol),
           color:
             r.id === this.selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
           drag: true,
           resize: true,
         });
+      });
+    } else {
+      const byId = new Map(data.map((item) => [item.id, item]));
+      current.forEach((region) => {
+        const saved = byId.get(region.id);
+        if (!saved) return;
+
+        this.styleRegionElement(region, saved.chord_symbol);
       });
     }
   }
@@ -106,9 +162,11 @@ export class RegionManager {
     const r = this.wsRegions.addRegion({
       start: time,
       end: time + dur,
-      content: chordName,
+      content: this.createLabelElement(chordName),
       color: COLOR_SELECTED,
     });
+
+    this.styleRegionElement(r, chordName);
 
     this.onRegionChange({
       id: r.id,
@@ -122,7 +180,8 @@ export class RegionManager {
   public updateContent(id: string, content: string, octave: number) {
     const r = this.get(id);
     if (r) {
-      r.setOptions({ content });
+      r.setOptions({ content: this.createLabelElement(content) });
+      this.styleRegionElement(r, content);
       this.onRegionChange({
         id: r.id,
         start: r.start,

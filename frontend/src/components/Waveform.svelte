@@ -84,7 +84,7 @@
   }
 
   function startEditing(id: string) {
-    const r = regionsData.find((reg) => reg.id === id);
+    const r = regionsData.find((reg: ChordRegion) => reg.id === id);
     if (!r) return;
     editState = { id, value: r.chord_symbol, octave: r.octave || 4 };
     isInvalid = false; // Reset error
@@ -112,24 +112,27 @@
       contextMenu = null;
     }
   }
+
+  function closeEditor() {
+    editState = null;
+    isInvalid = false;
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<div
-  class="relative w-full bg-gray-900 rounded-lg p-4 shadow-inner flex flex-col gap-2"
->
+<div class="relative w-full panel panel-muted flex flex-col gap-3">
   <div bind:this={container} class="w-full min-h-[128px]"></div>
 
-  <div class="flex justify-end items-center gap-2 px-2">
-    <span class="text-[10px] text-gray-500 uppercase font-bold">Zoom</span>
+  <div class="flex justify-end items-center gap-3 px-2">
+    <span class="micro-label">Zoom</span>
     <input
       type="range"
       min="10"
       max="300"
       bind:value={currentZoom}
       oninput={() => controller?.setZoom(currentZoom)}
-      class="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+      class="range-control w-36"
     />
   </div>
 
@@ -138,102 +141,98 @@
       class="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
     >
       <div
-        class="bg-indigo-900/90 backdrop-blur border border-indigo-400 text-white px-6 py-3 rounded-xl shadow-2xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-2 duration-200"
+        class="reveal rounded-2xl border px-6 py-3 shadow-2xl flex flex-col items-center"
+        style="background: rgba(255, 248, 235, 0.95); border-color: rgba(177, 118, 30, 0.35); color: #4f3b1d"
       >
-        <span
-          class="text-xs text-indigo-300 uppercase font-bold tracking-widest mb-1"
-          >AI Detected</span
-        >
-        <div class="text-2xl font-bold">{aiResult.name}</div>
-        <div class="text-sm text-gray-300 mt-1 font-mono opacity-80">
-          {aiResult.notes.join(" - ")}
+        <span class="micro-label" style="color: #9a6618">AI Detected</span>
+        <div class="text-2xl font-bold mt-1" style="font-family: Fraunces, serif;">
+          {aiResult.name}
+        </div>
+        <div class="text-sm mt-1 opacity-90" style="font-family: ui-monospace, monospace; color: #5f4e38;">
+          {aiResult.notes.join(" - ") || "No notes"}
         </div>
       </div>
     </div>
   {/if}
 
   {#if editState}
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onclick={(e) => e.stopPropagation()}
-    >
-      <div
-        class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-600 w-80"
-      >
-        <h3 class="text-lg font-bold mb-4 text-white">Edit Chord</h3>
+    <button
+      type="button"
+      class="modal-backdrop"
+      onclick={closeEditor}
+      aria-label="Close chord editor"
+    ></button>
+    <div class="modal-card compact">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Chord Region</h3>
+        <button class="close-ghost" onclick={closeEditor}>x</button>
+      </div>
 
-        <div class="mb-4">
-          <label class="text-xs text-gray-400 uppercase font-bold block mb-1"
-            >Symbol</label
-          >
-          <input
-            bind:value={editState.value}
-            oninput={() => (isInvalid = false)}
-            class="w-full bg-gray-900 border rounded p-2 text-white outline-none transition-colors {isInvalid
-              ? 'border-red-500 ring-1 ring-red-500'
-              : 'border-gray-600 focus:ring-2 focus:ring-blue-500'}"
-            placeholder="e.g. Cm7"
-            autofocus
-          />
-          {#if isInvalid}
-            <p class="text-red-400 text-xs mt-1">Invalid chord name</p>
-          {/if}
-        </div>
+      <div class="field-group">
+        <label class="micro-label" for="edit-chord-symbol">Chord Symbol</label>
+        <input
+          id="edit-chord-symbol"
+          bind:value={editState.value}
+          oninput={() => (isInvalid = false)}
+          class="input-field"
+          style={isInvalid
+            ? "border-color: var(--danger); box-shadow: 0 0 0 4px rgba(162, 70, 70, 0.2);"
+            : ""}
+          placeholder="e.g. Cm7"
+        />
+        {#if isInvalid}
+          <p class="form-note" style="color: #8f3f3f;">
+            Please enter a valid chord symbol.
+          </p>
+        {/if}
+      </div>
 
-        <div class="mb-6">
-          <div class="flex justify-between mb-1">
-            <label class="text-xs text-gray-400 uppercase font-bold"
-              >Octave</label
-            >
-            <span class="text-xs text-blue-400 font-bold"
-              >{editState.octave}</span
-            >
-          </div>
-          <input
-            type="range"
-            min="2"
-            max="6"
-            step="1"
-            bind:value={editState.octave}
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-          />
+      <div class="field-group" style="margin-top: 0.8rem;">
+        <div class="split-header" style="margin-bottom: 0;">
+          <label class="micro-label" for="edit-chord-octave">Octave</label>
+          <span class="status-pill muted">{editState.octave}</span>
         </div>
+        <input
+          id="edit-chord-octave"
+          type="range"
+          min="2"
+          max="6"
+          step="1"
+          bind:value={editState.octave}
+          class="range-control"
+        />
+      </div>
 
-        <div class="flex justify-end gap-2">
-          <button
-            class="px-3 py-1 text-sm text-gray-400 hover:text-white"
-            onclick={() => (editState = null)}>Cancel</button
-          >
-          <button
-            class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-            onclick={saveEdit}>Save</button
-          >
-        </div>
+      <div class="action-row" style="margin-top: 1rem; justify-content: flex-end;">
+        <button class="btn btn-outline" onclick={closeEditor}>Cancel</button>
+        <button class="btn btn-primary" onclick={saveEdit}>Save</button>
       </div>
     </div>
   {/if}
 
   {#if contextMenu}
     <div
-      class="fixed bg-gray-800 border border-gray-600 shadow-xl rounded z-[100] text-sm flex flex-col py-1 min-w-[120px]"
+      class="context-menu"
       style="top: {contextMenu.y}px; left: {contextMenu.x}px"
     >
       <button
-        class="px-4 py-2 hover:bg-gray-700 text-left text-white"
+        class="context-item"
         onclick={() => startEditing(contextMenu!.regionId)}>Edit Chord</button
       >
       <button
-        class="px-4 py-2 hover:bg-red-900/50 text-left text-red-300"
+        class="context-item danger"
         onclick={handleDeleteContext}>Delete</button
       >
     </div>
-    <div
+    <button
+      type="button"
       class="fixed inset-0 z-[99]"
+      aria-label="Close context menu"
       onclick={() => (contextMenu = null)}
       oncontextmenu={(e) => {
         e.preventDefault();
         contextMenu = null;
       }}
-    ></div>
+    ></button>
   {/if}
 </div>

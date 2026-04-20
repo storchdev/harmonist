@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { projectStore } from "./lib/projectStore.svelte";
   import { Api } from "./lib/api";
   import Waveform from "./components/Waveform.svelte";
@@ -11,8 +12,11 @@
 
   let aiSettings = $state({ onset: 0.6, frame: 0.4, minNoteLen: 100 });
   let isAiLoading = $state(false);
+  let saveNotice = $state("");
 
-  let importInput: HTMLInputElement;
+  let saveNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let importInput = $state<HTMLInputElement | undefined>();
 
   async function openLoadMenu() {
     projectList = await Api.projects.list();
@@ -30,175 +34,230 @@
   }
 
   function handleImportClick() {
-    importInput.click();
+    importInput?.click();
   }
+
+  function handleImportChange(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) projectStore.importFile(file);
+  }
+
+  function handleAudioChange(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) projectStore.uploadAudio(file);
+  }
+
+  function handleSaveProject() {
+    projectStore.save();
+    saveNotice = "Project saved locally";
+    if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
+    saveNoticeTimer = setTimeout(() => {
+      saveNotice = "";
+    }, 2200);
+  }
+
+  onDestroy(() => {
+    if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
+  });
 </script>
 
-<main class="min-h-screen bg-gray-800 text-white p-8">
-  <h1 class="text-3xl font-bold mb-6">Harmonist</h1>
+<main class="app-shell">
+  <header class="app-header">
+    <p class="eyebrow">Local first chord workspace</p>
+    <h1 class="app-title">Harmonist</h1>
+    <p class="app-subtitle">
+      Analyze recordings, review AI chord suggestions, and shape your timeline in
+      a calm, consistent editing layout.
+    </p>
+  </header>
 
   {#if !projectStore.current}
-    <div class="flex gap-4">
-      <button
-        class="bg-blue-600 px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold"
-        onclick={() => projectStore.create()}>New Project</button
-      >
+    <section class="panel panel-muted stack">
+      <div>
+        <h2 class="panel-title">Start a Session</h2>
+        <p class="panel-copy">
+          Create a new chord project, resume previous work, or import a JSON
+          timeline from disk.
+        </p>
+      </div>
 
-      <button
-        class="bg-gray-600 px-6 py-3 rounded-lg hover:bg-gray-700 font-semibold"
-        onclick={openLoadMenu}>Load Existing</button
-      >
+      <div class="action-row">
+        <button class="btn btn-primary" onclick={() => projectStore.create()}>
+          New Project
+        </button>
+        <button class="btn btn-secondary" onclick={openLoadMenu}>
+          Load Existing
+        </button>
+        <button class="btn btn-outline" onclick={handleImportClick}>
+          Import JSON
+        </button>
+      </div>
 
-      <button
-        class="border border-gray-500 px-6 py-3 rounded-lg hover:bg-gray-800 font-semibold text-gray-300"
-        onclick={handleImportClick}
-      >
-        Import JSON
-      </button>
       <input
         bind:this={importInput}
         type="file"
         accept=".json"
         class="hidden"
-        onchange={(e) =>
-          projectStore.importFile((e.target as HTMLInputElement).files![0])}
+        onchange={handleImportChange}
       />
-    </div>
+    </section>
 
     {#if showLoadMenu}
-      <div
-        class="mt-8 bg-gray-900 p-6 rounded-lg max-w-md border border-gray-700"
-      >
-        <h2 class="text-xl mb-4 font-bold text-gray-300">Select Project</h2>
+      <button
+        type="button"
+        class="modal-backdrop"
+        onclick={() => (showLoadMenu = false)}
+        aria-label="Close project picker"
+      ></button>
+      <div class="modal-card compact">
+        <div class="modal-header">
+          <h2 class="modal-title">Select Project</h2>
+          <button class="close-ghost" onclick={() => (showLoadMenu = false)}>
+            x
+          </button>
+        </div>
+
         {#if projectList.length === 0}
-          <p class="text-gray-500">No projects found.</p>
+          <p class="panel-copy">No projects found yet.</p>
         {:else}
-          <ul class="space-y-2">
+          <ul class="stack">
             {#each projectList as p}
               <li>
                 <button
-                  class="w-full text-left px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded flex justify-between items-center"
+                  class="btn btn-outline w-full flex justify-between items-center"
                   onclick={() => {
                     projectStore.load(p.id);
                     showLoadMenu = false;
                   }}
                 >
                   <span>{p.name}</span>
-                  <span class="text-xs text-gray-500"
-                    >{p.id.slice(0, 4)}...</span
-                  >
+                  <span class="micro-label">{p.id.slice(0, 4)}...</span>
                 </button>
               </li>
             {/each}
           </ul>
         {/if}
-        <button
-          class="mt-4 text-sm text-gray-400 hover:text-white"
-          onclick={() => (showLoadMenu = false)}>Cancel</button
-        >
       </div>
     {/if}
   {:else}
-    <div
-      class="mb-6 flex gap-4 items-center bg-gray-900 p-4 rounded-lg border border-gray-700"
-    >
-      <div>
-        <label class="text-xs text-gray-500 uppercase font-bold tracking-wider"
-          >Project Name</label
-        >
-        <input
-          type="text"
-          bind:value={projectStore.current.name}
-          class="block bg-transparent text-xl font-bold border-b border-gray-700 focus:border-blue-500 outline-none w-64"
-        />
-      </div>
-
-      <div class="h-8 w-px bg-gray-700 mx-2"></div>
-
-      <div class="flex flex-col">
-        <label class="text-xs text-gray-500 uppercase font-bold tracking-wider"
-          >Audio File</label
-        >
-        {#if projectStore.current.audio_file}
-          <span class="text-sm text-green-400 truncate max-w-[200px]"
-            >{projectStore.current.audio_file}</span
-          >
-        {:else}
+    <section class="panel stack">
+      <div class="field-grid">
+        <div class="field-group">
+          <label class="micro-label" for="project-name">Project Name</label>
           <input
-            type="file"
-            onchange={(e) =>
-              projectStore.uploadAudio(
-                (e.target as HTMLInputElement).files![0],
-              )}
-            class="text-sm text-gray-400 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600"
+            id="project-name"
+            type="text"
+            bind:value={projectStore.current.name}
+            class="input-field"
           />
-        {/if}
+        </div>
+
+        <div class="field-group">
+          <span class="micro-label">Audio File</span>
+          {#if projectStore.current.audio_file}
+            <span class="status-pill">{projectStore.current.audio_file}</span>
+          {:else}
+            <input
+              type="file"
+              onchange={handleAudioChange}
+              class="file-input"
+            />
+          {/if}
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-outline" onclick={() => projectStore.download()}>
+            Download JSON
+          </button>
+          <button class="btn btn-success" onclick={handleSaveProject}>
+            Save Project
+          </button>
+          <button
+            class="btn btn-danger"
+            onclick={() => (projectStore.current = null)}
+          >
+            Close
+          </button>
+        </div>
       </div>
 
-      <div class="flex-grow"></div>
+      {#if saveNotice}
+        <span class="status-pill muted">{saveNotice}</span>
+      {/if}
+    </section>
 
-      <button
-        class="bg-indigo-900/50 text-indigo-200 px-4 py-2 rounded hover:bg-indigo-900 border border-indigo-900/50 mr-2"
-        onclick={() => projectStore.download()}
-      >
-        Download JSON
-      </button>
-
-      <button
-        class="bg-green-600 px-4 py-2 rounded hover:bg-green-700 shadow-lg"
-        onclick={() => {
-          projectStore.save();
-          alert("Saved project!");
-        }}>Save Project</button
-      >
-      <button
-        class="bg-red-900/50 text-red-200 px-4 py-2 rounded hover:bg-red-900"
-        onclick={() => (projectStore.current = null)}>Close</button
-      >
-    </div>
-
-    <div class="mb-4">
+    <section class="panel stage-panel stack">
+      <div class="split-header">
+        <h2 class="panel-title">Timeline</h2>
+        <p class="hint">Right click a region for edit actions</p>
+      </div>
       <Waveform
         bind:this={waveformRef}
         audioUrl={projectStore.audioUrl || ""}
         regionsData={projectStore.current.regions}
         onRegionChange={(e) => projectStore.updateRegion(e)}
       />
-    </div>
+    </section>
 
-    <div
-      class="flex gap-4 p-4 bg-gray-900 rounded-lg items-center border border-gray-700"
-    >
-      <button
-        class="bg-gray-700 px-6 py-2 rounded hover:bg-gray-600 font-medium"
-        onclick={() => waveformRef?.playPause()}>Play / Pause</button
-      >
+    <section class="panel panel-muted">
+      <div class="control-grid">
+        <div class="button-cluster">
+          <button class="btn btn-secondary" onclick={() => waveformRef?.playPause()}>
+            Play / Pause
+          </button>
 
-      <button
-        class="bg-purple-600 px-6 py-2 rounded hover:bg-purple-700 font-medium"
-        onclick={() => waveformRef?.addRegionAtCurrentTime("C")}
-        >Add Chord</button
-      >
+          <button
+            class="btn btn-primary"
+            onclick={() => waveformRef?.addRegionAtCurrentTime("C")}
+          >
+            Add Chord
+          </button>
 
-      <button
-        class="bg-indigo-600 px-4 py-2 rounded hover:bg-indigo-700 font-medium flex items-center gap-2 relative"
-        onclick={triggerAi}
-        title="Identify chord"
-      >
-        {#if isAiLoading}
-          <div
-            class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-          ></div>
-        {:else}
-          <span>✨ AI</span>
-        {/if}
-      </button>
+          <button class="btn btn-ai" onclick={triggerAi} title="Identify chord">
+            {#if isAiLoading}
+              <span class="flex items-center gap-2"><span class="spinner"></span>
+                Analyzing</span
+              >
+            {:else}
+              <span>AI Detect</span>
+            {/if}
+          </button>
 
-      <button
-        class="bg-indigo-600 px-4 py-2 rounded hover:bg-indigo-700 font-medium flex items-center gap-2 relative"
-        onclick={() => (showAiSettings = !showAiSettings)}
-        title="AI Settings">⚙️</button
-      >
+          <button
+            class="btn btn-outline btn-icon"
+            onclick={() => (showAiSettings = !showAiSettings)}
+            title="AI Settings"
+          >
+            AI Settings
+          </button>
+        </div>
+
+        <div class="control-group">
+          <span class="micro-label">Synth Volume</span>
+          <input
+            type="range"
+            min="-40"
+            max="20"
+            value="-10"
+            oninput={(e) =>
+              waveformRef?.setSynthVolume(Number(e.currentTarget.value))}
+            class="range-control"
+          />
+        </div>
+
+        <div class="control-group">
+          <span class="micro-label">Synth Shape</span>
+          <select
+            class="select-control"
+            onchange={(e) => waveformRef?.setOscillator(e.currentTarget.value)}
+          >
+            <option value="triangle">Triangle (soft)</option>
+            <option value="sine">Sine (pure)</option>
+            <option value="square">Square (retro)</option>
+            <option value="sawtooth">Sawtooth (sharp)</option>
+          </select>
+        </div>
+      </div>
 
       {#if showAiSettings}
         <AiSettings
@@ -206,36 +265,6 @@
           onClose={() => (showAiSettings = false)}
         />
       {/if}
-
-      <div class="h-8 w-px bg-gray-700 mx-2"></div>
-
-      <div class="flex flex-col">
-        <span class="text-[10px] uppercase text-gray-500 font-bold"
-          >Synth Vol</span
-        >
-        <input
-          type="range"
-          min="-40"
-          max="20"
-          value="-10"
-          oninput={(e) =>
-            waveformRef?.setSynthVolume(Number(e.currentTarget.value))}
-          class="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer mt-2"
-        />
-      </div>
-
-      <div class="flex flex-col">
-        <span class="text-[10px] uppercase text-gray-500 font-bold">Sound</span>
-        <select
-          class="bg-gray-800 text-xs text-white p-1 rounded border border-gray-600 mt-1 outline-none focus:border-blue-500"
-          onchange={(e) => waveformRef?.setOscillator(e.currentTarget.value)}
-        >
-          <option value="triangle">Triangle (Soft)</option>
-          <option value="sine">Sine (Pure)</option>
-          <option value="square">Square (Retro)</option>
-          <option value="sawtooth">Sawtooth (Sharp)</option>
-        </select>
-      </div>
-    </div>
+    </section>
   {/if}
 </main>
