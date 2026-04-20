@@ -43,6 +43,7 @@ export class WaveformController {
 
     this.ws = WaveSurfer.create({
       container,
+      backend: "WebAudio",
       waveColor: "#4b5563",
       progressColor: "#3b82f6",
       height: 128,
