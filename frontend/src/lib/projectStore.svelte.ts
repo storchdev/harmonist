@@ -74,12 +74,18 @@ export class ProjectStore {
       // Handle Add/Update logic here (same as your original code)
       const r = e as RegionChangeEvent;
       const idx = this.current.regions.findIndex((reg) => reg.id === r.id);
+      const existing = idx >= 0 ? this.current.regions[idx] : null;
+      const trimmedComment = r.comment?.trim();
       const newRegion = {
         id: r.id,
         start: r.start,
         end: r.end,
         chord_symbol: r.content,
-        octave: r.octave || 4,
+        octave: r.octave ?? existing?.octave ?? 4,
+        comment:
+          r.comment !== undefined
+            ? (trimmedComment || undefined)
+            : existing?.comment,
       };
 
       if (idx >= 0)

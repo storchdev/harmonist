@@ -6,6 +6,11 @@ const MIN_DURATION = 0.1;
 const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
 const COLOR_SELECTED = "rgba(239, 68, 68, 0.4)";
 
+type RegionLabelData = {
+  chordSymbol: string;
+  comment?: string;
+};
+
 export class RegionManager {
   private wsRegions: RegionsPlugin;
   public selectedRegionId: string | null = null;
@@ -20,12 +25,17 @@ export class RegionManager {
     maxWidth: "none",
     pointerEvents: "none",
     zIndex: "2",
+    display: "block",
+    overflow: "visible",
+  };
+
+  private readonly mainLabelStyle: Partial<CSSStyleDeclaration> = {
     border: "1px solid rgba(90, 66, 39, 0.38)",
     borderRadius: "999px",
     background: "rgba(255, 248, 235, 0.96)",
     color: "#3f3023",
     padding: "0.16rem 0.5rem",
-    fontSize: "0.78rem",
+    fontSize: "0.9rem",
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: "0.01em",
@@ -34,15 +44,91 @@ export class RegionManager {
     whiteSpace: "nowrap",
   };
 
-  private createLabelElement(text: string) {
-    const label = document.createElement("span");
+  private readonly commentLabelStyle: Partial<CSSStyleDeclaration> = {
+    position: "absolute",
+    left: "50%",
+    top: "calc(100% + 0.48rem)",
+    transform: "translateX(-50%)",
+    border: "1px solid rgba(49, 67, 94, 0.32)",
+    borderRadius: "0.45rem",
+    background: "rgba(216, 228, 246, 0.95)",
+    color: "#213855",
+    fontSize: "0.9rem",
+    fontWeight: "600",
+    lineHeight: "1.2",
+    letterSpacing: "0.01em",
+    padding: "0.14rem 0.38rem",
+    textAlign: "center",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    width: "max-content",
+    maxWidth: "220px",
+  };
+
+  private createLabelElement(data: RegionLabelData) {
+    const label = document.createElement("div");
     label.className = "region-label-chip";
-    label.textContent = text;
+    this.setLabelElementText(label, data);
     Object.assign(label.style, this.labelStyle);
     return label;
   }
 
-  private styleRegionElement(region: any, labelText?: string) {
+  private setLabelElementText(labelEl: HTMLElement, data: RegionLabelData) {
+    labelEl.dataset.chordSymbol = data.chordSymbol;
+
+    const normalizedComment = data.comment?.trim();
+    if (normalizedComment) {
+      labelEl.dataset.comment = normalizedComment;
+    } else {
+      delete labelEl.dataset.comment;
+    }
+
+    labelEl.replaceChildren();
+
+    const chord = document.createElement("span");
+    chord.className = "region-label-main";
+    chord.textContent = data.chordSymbol;
+    Object.assign(chord.style, this.mainLabelStyle);
+    labelEl.append(chord);
+
+    if (normalizedComment) {
+      const comment = document.createElement("span");
+      comment.className = "region-label-comment";
+      comment.textContent = normalizedComment;
+      Object.assign(comment.style, this.commentLabelStyle);
+      labelEl.append(comment);
+    }
+  }
+
+  private setRegionLabelData(region: any, data: RegionLabelData) {
+    (region as any).harmonistLabelData = {
+      chordSymbol: data.chordSymbol,
+      comment: data.comment?.trim() || undefined,
+    };
+  }
+
+  private getRegionLabelData(region: any): RegionLabelData {
+    const labelData = (region as any).harmonistLabelData as
+      | RegionLabelData
+      | undefined;
+    if (labelData?.chordSymbol) return labelData;
+
+    const contentEl = (region as any).content;
+    if (contentEl instanceof HTMLElement) {
+      return {
+        chordSymbol: contentEl.dataset.chordSymbol || "",
+        comment: contentEl.dataset.comment || undefined,
+      };
+    }
+
+    if (typeof contentEl === "string") {
+      return { chordSymbol: contentEl.trim() };
+    }
+
+    return { chordSymbol: "" };
+  }
+
+  private styleRegionElement(region: any, labelData?: RegionLabelData) {
     if (region.element) {
       region.element.classList.add("harmonist-region");
       region.element.style.position = "absolute";
@@ -52,8 +138,12 @@ export class RegionManager {
     const contentEl = (region as any).content;
     if (contentEl instanceof HTMLElement) {
       contentEl.classList.add("region-label-chip");
-      if (labelText !== undefined) contentEl.textContent = labelText;
+      if (labelData) this.setLabelElementText(contentEl, labelData);
       Object.assign(contentEl.style, this.labelStyle);
+    }
+
+    if (labelData) {
+      this.setRegionLabelData(region, labelData);
     }
   }
 
@@ -75,12 +165,13 @@ export class RegionManager {
     // 1. Updates & Collisions
     this.wsRegions.on("region-updated", (region) => {
       this.handleCollision(region);
+      const labelData = this.getRegionLabelData(region);
       this.onRegionChange({
         id: region.id,
         start: region.start,
         end: region.end,
-        content:
-          (region as any).content?.innerText || (region as any).content || "",
+        content: labelData.chordSymbol,
+        comment: labelData.comment,
       });
     });
 
@@ -122,7 +213,10 @@ export class RegionManager {
           id: r.id,
           start: r.start,
           end: r.end,
-          content: this.createLabelElement(r.chord_symbol),
+          content: this.createLabelElement({
+            chordSymbol: r.chord_symbol,
+            comment: r.comment,
+          }),
           color:
             r.id === this.selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
           drag: true,
@@ -135,7 +229,10 @@ export class RegionManager {
         const saved = byId.get(region.id);
         if (!saved) return;
 
-        this.styleRegionElement(region, saved.chord_symbol);
+        this.styleRegionElement(region, {
+          chordSymbol: saved.chord_symbol,
+          comment: saved.comment,
+        });
       });
     }
   }
@@ -162,32 +259,40 @@ export class RegionManager {
     const r = this.wsRegions.addRegion({
       start: time,
       end: time + dur,
-      content: this.createLabelElement(chordName),
+      content: this.createLabelElement({ chordSymbol: chordName }),
       color: COLOR_SELECTED,
     });
 
-    this.styleRegionElement(r, chordName);
+    this.styleRegionElement(r, { chordSymbol: chordName });
 
     this.onRegionChange({
       id: r.id,
       start: r.start,
       end: r.end,
       content: chordName,
+      comment: undefined,
     });
     this.select(r.id);
   }
 
-  public updateContent(id: string, content: string, octave: number) {
+  public updateContent(
+    id: string,
+    content: string,
+    octave: number,
+    comment?: string,
+  ) {
     const r = this.get(id);
     if (r) {
-      r.setOptions({ content: this.createLabelElement(content) });
-      this.styleRegionElement(r, content);
+      const labelData = { chordSymbol: content, comment };
+      r.setOptions({ content: this.createLabelElement(labelData) });
+      this.styleRegionElement(r, labelData);
       this.onRegionChange({
         id: r.id,
         start: r.start,
         end: r.end,
         content,
         octave,
+        comment,
       });
     }
   }

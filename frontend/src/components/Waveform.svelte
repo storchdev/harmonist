@@ -17,9 +17,12 @@
 
   // UI States
   let aiResult = $state<{ notes: string[]; name: string } | null>(null);
-  let editState = $state<{ id: string; value: string; octave: number } | null>(
-    null,
-  );
+  let editState = $state<{
+    id: string;
+    value: string;
+    octave: number;
+    comment: string;
+  } | null>(null);
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
     null,
   );
@@ -98,7 +101,12 @@
   function startEditing(id: string) {
     const r = regionsData.find((reg: ChordRegion) => reg.id === id);
     if (!r) return;
-    editState = { id, value: r.chord_symbol, octave: r.octave || 4 };
+    editState = {
+      id,
+      value: r.chord_symbol,
+      octave: r.octave || 4,
+      comment: r.comment || "",
+    };
     isInvalid = false; // Reset error
     contextMenu = null;
   }
@@ -114,7 +122,12 @@
       return;
     }
 
-    controller.updateRegionContent(editState.id, cleanValue, editState.octave);
+    controller.updateRegionContent(
+      editState.id,
+      cleanValue,
+      editState.octave,
+      editState.comment,
+    );
     editState = null;
   }
 
@@ -230,6 +243,16 @@
           step="1"
           bind:value={editState.octave}
           class="range-control"
+        />
+      </div>
+
+      <div class="field-group" style="margin-top: 0.8rem;">
+        <label class="micro-label" for="edit-chord-comment">Comment</label>
+        <input
+          id="edit-chord-comment"
+          bind:value={editState.comment}
+          class="input-field"
+          placeholder="Optional note for this chord"
         />
       </div>
 

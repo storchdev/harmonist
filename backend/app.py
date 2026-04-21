@@ -45,6 +45,40 @@ def get_project_path(project_id):
     return os.path.join(PROJECTS_DIR, f"{project_id}.json")
 
 
+def normalize_region(region):
+    if not isinstance(region, dict):
+        return region
+
+    normalized = dict(region)
+    comment = normalized.get("comment")
+
+    if comment is None:
+        return normalized
+
+    normalized_comment = str(comment).strip()
+    if normalized_comment:
+        normalized["comment"] = normalized_comment
+    else:
+        normalized.pop("comment", None)
+
+    return normalized
+
+
+def normalize_project_data(project_data):
+    if not isinstance(project_data, dict):
+        return project_data
+
+    normalized = dict(project_data)
+    regions = normalized.get("regions", [])
+
+    if not isinstance(regions, list):
+        normalized["regions"] = []
+    else:
+        normalized["regions"] = [normalize_region(region) for region in regions]
+
+    return normalized
+
+
 # --- ROUTES ---
 
 
@@ -97,7 +131,7 @@ def create_project():
         "id": project_id,
         "name": data.get("name", "New Analysis"),
         "audio_file": None,  # Filename in AUDIO_DIR
-        "regions": [],  # format: {id, start, end, chord_symbol}
+        "regions": [],  # format: {id, start, end, chord_symbol, octave?, comment?}
         "bpm": 120,
     }
 
@@ -114,14 +148,15 @@ def get_project(project_id):
     if not os.path.exists(path):
         return jsonify({"error": "Project not found"}), 404
     with open(path, "r") as f:
-        return jsonify(json.load(f))
+        return jsonify(normalize_project_data(json.load(f)))
 
 
 @app.route("/api/projects/<project_id>", methods=["PUT"])
 def save_project(project_id):
     path = get_project_path(project_id)
+    payload = normalize_project_data(request.json)
     with open(path, "w") as f:
-        json.dump(request.json, f, indent=4)
+        json.dump(payload, f, indent=4)
     return jsonify({"status": "saved"})
 
 

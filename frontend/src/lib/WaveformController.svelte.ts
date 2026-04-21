@@ -152,8 +152,13 @@ export class WaveformController {
     if (this.isReady) this.regions.add(this.ws.getCurrentTime(), chord);
   }
 
-  updateRegionContent(id: string, content: string, octave: number) {
-    this.regions.updateContent(id, content, octave);
+  updateRegionContent(
+    id: string,
+    content: string,
+    octave: number,
+    comment?: string,
+  ) {
+    this.regions.updateContent(id, content, octave, comment);
   }
 
   deleteSelected() {

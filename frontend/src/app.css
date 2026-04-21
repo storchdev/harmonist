@@ -522,18 +522,44 @@ select {
   max-width: none;
   pointer-events: none;
   z-index: 2;
+  display: block;
+  overflow: visible;
+}
+
+.region-label-main {
   border: 1px solid rgba(90, 66, 39, 0.38);
   border-radius: 999px;
   background: rgba(255, 248, 235, 0.96);
   color: #3f3023;
   padding: 0.16rem 0.5rem;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 800;
   text-align: center;
   letter-spacing: 0.01em;
   line-height: 1.1;
   box-shadow: 0 2px 8px rgba(62, 43, 24, 0.2);
   white-space: nowrap;
+}
+
+.region-label-comment {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.48rem);
+  transform: translateX(-50%);
+  border: 1px solid rgba(49, 67, 94, 0.32);
+  border-radius: 0.45rem;
+  background: rgba(216, 228, 246, 0.95);
+  color: #213855;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  padding: 0.14rem 0.38rem;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  width: max-content;
+  max-width: 220px;
 }
 
 .context-menu {
