@@ -72,11 +72,14 @@ export class WaveformController {
       this.player.ensureReady();
       this.onUserInteraction();
 
+      // Reset playback slice tracking so resume does not replay skipped regions.
+      const t = this.ws.getCurrentTime();
+      this.lastTime = t;
+
       // [FIX] Stop previous voices to prevent distortion/stacking
       this.player.stopAll();
 
       // [FIX] Resume synth if starting inside a region
-      const t = this.ws.getCurrentTime();
       const currentRegion = this.regions
         .getAll()
         .find((r) => t >= r.start && t < r.end);

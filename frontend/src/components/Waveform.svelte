@@ -13,6 +13,7 @@
   }>();
 
   let container = $state<HTMLElement>();
+  let panelEl = $state<HTMLElement>();
   let controller = $state<WaveformController>();
 
   // UI States
@@ -44,7 +45,17 @@
         contextMenu = null;
       },
       onShowContextMenu: (e, id) => {
-        contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
+        const panelRect = panelEl?.getBoundingClientRect();
+        if (!panelRect) {
+          contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
+          return;
+        }
+
+        contextMenu = {
+          x: e.clientX - panelRect.left,
+          y: e.clientY - panelRect.top,
+          regionId: id,
+        };
       },
       onEditRegion: (id) => startEditing(id),
     });
@@ -146,7 +157,7 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<div class="relative w-full panel panel-muted flex flex-col gap-3">
+<div bind:this={panelEl} class="relative w-full panel panel-muted flex flex-col gap-3">
   <div bind:this={container} class="w-full min-h-[128px]"></div>
 
   <div class="waveform-controls">

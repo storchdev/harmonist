@@ -563,7 +563,7 @@ select {
 }
 
 .context-menu {
-  position: fixed;
+  position: absolute;
   z-index: 110;
   min-width: 138px;
   border-radius: 12px;
