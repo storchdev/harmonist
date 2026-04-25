@@ -3,10 +3,16 @@ import { Chord, Note } from "@tonaljs/tonal";
 type ParsedChord = ReturnType<typeof Chord.get>;
 
 function parseChordWithFallback(symbol: string): ParsedChord | null {
-  const attempts = [symbol];
+  const attempts = new Set([symbol]);
 
   if (/add2\b/i.test(symbol)) {
-    attempts.push(symbol.replace(/add2\b/gi, "add9"));
+    attempts.add(symbol.replace(/add2\b/gi, "add9"));
+  }
+
+  if (/dim\s*(?:\(\s*(?:maj7|M7)\s*\)|(?:maj7|M7))/i.test(symbol)) {
+    attempts.add(
+      symbol.replace(/dim\s*(?:\(\s*(?:maj7|M7)\s*\)|(?:maj7|M7))/gi, "oM7"),
+    );
   }
 
   for (const candidate of attempts) {
