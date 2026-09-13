@@ -84,6 +84,9 @@
   export const playPause = () => controller?.playPause();
   export const addRegionAtCurrentTime = (c: string) => controller?.addRegion(c);
   export const setSynthVolume = (v: number) => controller?.setSynthVolume(v);
+  export const setTrackVolume = (v: number) => controller?.setTrackVolume(v);
+  export const setSynthMuted = (muted: boolean) => controller?.setSynthMuted(muted);
+  export const setTrackMuted = (muted: boolean) => controller?.setTrackMuted(muted);
   export const setOscillator = (t: string) => controller?.setOscillator(t);
 
   export async function askAiForChord(settings: any) {
@@ -115,7 +118,7 @@
     editState = {
       id,
       value: r.chord_symbol,
-      octave: r.octave || 4,
+      octave: r.octave ?? 4,
       comment: r.comment || "",
     };
     isInvalid = false; // Reset error

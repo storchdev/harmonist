@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { projectStore } from "./lib/projectStore.svelte";
   import { Api } from "./lib/api";
   import Waveform from "./components/Waveform.svelte";
@@ -9,6 +9,10 @@
   let projectList = $state<{ id: string; name: string }[]>([]);
   let showAiSettings = $state(false);
   let waveformRef = $state<Waveform>();
+  let synthVolume = $state(-10);
+  let trackVolume = $state(1);
+  let synthMuted = $state(false);
+  let trackMuted = $state(false);
 
   let aiSettings = $state({ onset: 0.6, frame: 0.4, minNoteLen: 100 });
   let isAiLoading = $state(false);
@@ -47,9 +51,24 @@
     if (file) projectStore.uploadAudio(file);
   }
 
-  function handleSaveProject() {
-    projectStore.save();
-    saveNotice = "Project saved locally";
+  function toggleSynthMute() {
+    synthMuted = !synthMuted;
+    waveformRef?.setSynthMuted(synthMuted);
+  }
+
+  function toggleTrackMute() {
+    trackMuted = !trackMuted;
+    waveformRef?.setTrackMuted(trackMuted);
+  }
+
+  async function handleSaveProject() {
+    try {
+      await projectStore.save();
+      saveNotice = "Project saved";
+    } catch (error) {
+      console.error("Failed to save project", error);
+      saveNotice = "Could not save project";
+    }
     if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
     saveNoticeTimer = setTimeout(() => {
       saveNotice = "";
@@ -59,6 +78,8 @@
   onDestroy(() => {
     if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
   });
+
+  onMount(() => projectStore.restoreLastProject());
 </script>
 
 <main class="app-shell">
@@ -175,7 +196,7 @@
           </button>
           <button
             class="btn btn-danger"
-            onclick={() => (projectStore.current = null)}
+            onclick={() => projectStore.close()}
           >
             Close
           </button>
@@ -239,11 +260,29 @@
             type="range"
             min="-40"
             max="20"
-            value="-10"
-            oninput={(e) =>
-              waveformRef?.setSynthVolume(Number(e.currentTarget.value))}
+            bind:value={synthVolume}
+            oninput={() => waveformRef?.setSynthVolume(synthVolume)}
             class="range-control"
           />
+          <button class="btn btn-outline" onclick={toggleSynthMute}>
+            {synthMuted ? "Unmute Synth" : "Mute Synth"}
+          </button>
+        </div>
+
+        <div class="control-group">
+          <span class="micro-label">Track Volume</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            bind:value={trackVolume}
+            oninput={() => waveformRef?.setTrackVolume(trackVolume)}
+            class="range-control"
+          />
+          <button class="btn btn-outline" onclick={toggleTrackMute}>
+            {trackMuted ? "Unmute Track" : "Mute Track"}
+          </button>
         </div>
 
         <div class="control-group">

@@ -28,6 +28,8 @@ export class WaveformController {
   private lastTime = 0;
   private onUserInteraction: () => void;
   private zoomLevel = 50;
+  private trackVolume = 1;
+  private trackMuted = false;
 
   constructor(
     container: HTMLElement,
@@ -92,7 +94,7 @@ export class WaveformController {
           const remaining = currentRegion.end - t;
           // Guard against extremely short durations which cause "Quiet/Clicky" envelopes
           if (remaining > 0.05) {
-            this.player.playChord(data.chord_symbol, remaining, 4);
+            this.player.playChord(data.chord_symbol, remaining, data.octave ?? 4);
           }
         }
       }
@@ -123,7 +125,11 @@ export class WaveformController {
       active.forEach((r) => {
         const data = this.regionsCache.find((cache) => cache.id === r.id);
         if (data && r.end - r.start > 0.05) {
-          this.player.playChord(data.chord_symbol, r.end - r.start, 4);
+          this.player.playChord(
+            data.chord_symbol,
+            r.end - r.start,
+            data.octave ?? 4,
+          );
         }
       });
       this.lastTime = t;
@@ -189,6 +195,17 @@ export class WaveformController {
   }
   setSynthVolume(v: number) {
     this.player.setVolume(v);
+  }
+  setTrackVolume(v: number) {
+    this.trackVolume = v;
+    if (!this.trackMuted) this.ws.setVolume(v);
+  }
+  setSynthMuted(muted: boolean) {
+    this.player.setMuted(muted);
+  }
+  setTrackMuted(muted: boolean) {
+    this.trackMuted = muted;
+    this.ws.setVolume(muted ? 0 : this.trackVolume);
   }
 
   seek(amount: number) {

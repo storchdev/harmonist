@@ -5,6 +5,8 @@ export class ChordPlayer {
   private synth: Tone.PolySynth;
   private limiter: Tone.Limiter; // NEW
   private isReady: boolean = false;
+  private volume = -10;
+  private muted = false;
 
   constructor() {
     this.limiter = new Tone.Limiter(-1).toDestination();
@@ -23,7 +25,8 @@ export class ChordPlayer {
       },
     }).toDestination();
 
-    this.synth.volume.value = 0;
+    // Match the initial Synth Volume control rather than waiting for its first input.
+    this.synth.volume.value = this.volume;
   }
 
   async ensureReady() {
@@ -68,7 +71,13 @@ export class ChordPlayer {
   }
 
   setVolume(db: number) {
-    this.synth.volume.rampTo(db, 0.1);
+    this.volume = db;
+    if (!this.muted) this.synth.volume.rampTo(db, 0.1);
+  }
+
+  setMuted(muted: boolean) {
+    this.muted = muted;
+    this.synth.volume.rampTo(muted ? -100 : this.volume, 0.05);
   }
 
   setOscillatorType(type: any) {

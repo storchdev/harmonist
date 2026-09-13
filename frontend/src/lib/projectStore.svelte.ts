@@ -2,6 +2,7 @@ import { Api } from "./api";
 import type { ProjectData, RegionChangeEvent } from "../types";
 
 export class ProjectStore {
+  private readonly lastProjectKey = "harmonist:last-project-id";
   current = $state<ProjectData | null>(null);
   audioUrl = $derived(
     this.current?.audio_file ? `/api/audio/${this.current.audio_file}` : null,
@@ -9,10 +10,30 @@ export class ProjectStore {
 
   async load(id: string) {
     this.current = await Api.projects.get(id);
+    localStorage.setItem(this.lastProjectKey, id);
   }
 
   async create() {
     this.current = await Api.projects.create("New Analysis");
+    localStorage.setItem(this.lastProjectKey, this.current.id);
+  }
+
+  async restoreLastProject() {
+    const id = localStorage.getItem(this.lastProjectKey);
+    if (!id) return;
+
+    try {
+      await this.load(id);
+    } catch (error) {
+      // The project may have been removed on another device or by the server.
+      localStorage.removeItem(this.lastProjectKey);
+      console.warn("Could not restore the last project", error);
+    }
+  }
+
+  close() {
+    this.current = null;
+    localStorage.removeItem(this.lastProjectKey);
   }
 
   async uploadAudio(file: File) {
@@ -25,6 +46,7 @@ export class ProjectStore {
   async save() {
     if (!this.current) return;
     await Api.projects.save(this.current.id, this.current);
+    localStorage.setItem(this.lastProjectKey, this.current.id);
   }
 
   // --- NEW: Download JSON ---
