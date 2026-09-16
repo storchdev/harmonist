@@ -437,6 +437,16 @@ select {
   color: var(--text);
 }
 
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-ghost:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
 .header-actions {
   display: flex;
   align-items: center;

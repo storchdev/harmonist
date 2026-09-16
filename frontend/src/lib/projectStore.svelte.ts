@@ -3,18 +3,23 @@ import type { ProjectData, RegionChangeEvent } from "../types";
 
 export class ProjectStore {
   private readonly lastProjectKey = "harmonist:last-project-id";
+  private readonly maxHistory = 50;
   current = $state<ProjectData | null>(null);
+  private history = $state<ProjectData["regions"][]>([]);
   audioUrl = $derived(
     this.current?.audio_file ? `/api/audio/${this.current.audio_file}` : null,
   );
+  canUndo = $derived(this.history.length > 0);
 
   async load(id: string) {
     this.current = await Api.projects.get(id);
+    this.history = [];
     localStorage.setItem(this.lastProjectKey, id);
   }
 
   async create() {
     this.current = await Api.projects.create("New Analysis");
+    this.history = [];
     localStorage.setItem(this.lastProjectKey, this.current.id);
   }
 
@@ -33,6 +38,7 @@ export class ProjectStore {
 
   close() {
     this.current = null;
+    this.history = [];
     localStorage.removeItem(this.lastProjectKey);
   }
 
@@ -87,8 +93,20 @@ export class ProjectStore {
     }
   }
 
+  private snapshotHistory() {
+    if (!this.current) return;
+    this.history.push(structuredClone(this.current.regions));
+    if (this.history.length > this.maxHistory) this.history.shift();
+  }
+
+  undo() {
+    if (!this.current || this.history.length === 0) return;
+    this.current.regions = this.history.pop()!;
+  }
+
   updateRegion(e: RegionChangeEvent | { action: "delete"; id: string }) {
     if (!this.current) return;
+    this.snapshotHistory();
 
     if ("action" in e && e.action === "delete") {
       this.current.regions = this.current.regions.filter((r) => r.id !== e.id);

@@ -27,6 +27,7 @@ export class WaveformController {
   private regionsCache: ChordRegion[] = [];
   private lastTime = 0;
   private onUserInteraction: () => void;
+  private onEditRegion: (id: string) => void;
   private zoomLevel = 50;
   private trackVolume = 1;
   private trackMuted = false;
@@ -41,6 +42,7 @@ export class WaveformController {
     },
   ) {
     this.onUserInteraction = callbacks.onUserInteraction;
+    this.onEditRegion = callbacks.onEditRegion;
     this.player = new ChordPlayer();
 
     this.ws = WaveSurfer.create({
@@ -182,6 +184,12 @@ export class WaveformController {
 
   hasSelectedRegion() {
     return this.regions.selectedRegionId !== null;
+  }
+
+  editSelected() {
+    if (this.regions.selectedRegionId) {
+      this.onEditRegion(this.regions.selectedRegionId);
+    }
   }
 
   playPause() {

@@ -15,17 +15,29 @@
       ],
     },
     {
+      title: "Chords",
+      rows: [
+        ["Tab / Shift + Tab", "Select next / previous chord"],
+        ["A", "Add chord at playhead"],
+        ["E / Enter", "Edit selected chord"],
+        ["Delete / Backspace", "Delete selected chord"],
+      ],
+    },
+    {
       title: "Selected region",
       rows: [
         ["← / →", "Move region"],
         ["Shift + ← / →", "Resize region"],
         ["Ctrl + ← / →", "Select neighboring region"],
-        ["Delete / Backspace", "Delete region"],
       ],
     },
     {
       title: "Timeline",
       rows: [["Scroll", "Zoom in / out"]],
+    },
+    {
+      title: "History",
+      rows: [["Ctrl / Cmd + Z", "Undo last change"]],
     },
   ];
 </script>

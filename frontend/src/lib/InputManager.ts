@@ -42,6 +42,29 @@ export class InputManager {
       return;
     }
 
+    if (e.key === "Tab") {
+      e.preventDefault();
+      this.controller.regions.selectNeighbor(e.shiftKey ? -1 : 1);
+      return;
+    }
+
+    if (!e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      this.controller.addRegion("C");
+      return;
+    }
+
+    if (
+      !e.ctrlKey &&
+      !e.metaKey &&
+      (e.key === "Enter" || e.key.toLowerCase() === "e") &&
+      this.controller.hasSelectedRegion()
+    ) {
+      e.preventDefault();
+      this.controller.editSelected();
+      return;
+    }
+
     // 1. REGION MODE (Precise Editing)
     if (this.controller.hasSelectedRegion()) {
       if (isLeft || isRight) {

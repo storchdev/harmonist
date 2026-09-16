@@ -24,6 +24,7 @@
     ChevronDown,
     Check,
     Keyboard,
+    Undo2,
   } from "@lucide/svelte";
 
   const oscillatorLabels: Record<string, string> = {
@@ -77,6 +78,21 @@
     }
     projectList = await Api.projects.list();
     showLoadMenu = true;
+  }
+
+  function handleWindowKeydown(e: KeyboardEvent) {
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      projectStore.undo();
+    }
   }
 
   function handleWindowClick(e: MouseEvent) {
@@ -156,7 +172,7 @@
   });
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
 
 <main class="app-shell">
   <header class="app-header">
@@ -257,6 +273,14 @@
       {/if}
 
       <div class="toolbar-group project-actions">
+        <button
+          class="btn-ghost"
+          onclick={() => projectStore.undo()}
+          disabled={!projectStore.canUndo}
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 size={16} />
+        </button>
         <button
           class="btn-ghost"
           onclick={() => projectStore.download()}

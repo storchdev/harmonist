@@ -205,7 +205,15 @@ export class RegionManager {
 
   public sync(data: ChordRegion[]) {
     const current = this.wsRegions.getRegions();
-    if (current.length === 0 || current.length !== data.length) {
+    const byIdData = new Map(data.map((item) => [item.id, item]));
+    const needsRebuild =
+      current.length !== data.length ||
+      current.some((region) => {
+        const saved = byIdData.get(region.id);
+        return !saved || saved.start !== region.start || saved.end !== region.end;
+      });
+
+    if (current.length === 0 || needsRebuild) {
       this.wsRegions.clearRegions();
       data.forEach((r) => {
         if (r.end - r.start < MIN_DURATION) return;
@@ -224,9 +232,8 @@ export class RegionManager {
         });
       });
     } else {
-      const byId = new Map(data.map((item) => [item.id, item]));
       current.forEach((region) => {
-        const saved = byId.get(region.id);
+        const saved = byIdData.get(region.id);
         if (!saved) return;
 
         this.styleRegionElement(region, {
@@ -327,8 +334,13 @@ export class RegionManager {
 
   public selectNeighbor(direction: number) {
     const sorted = this.getAll().sort((a, b) => a.start - b.start);
+    if (sorted.length === 0) return;
+
     const idx = sorted.findIndex((r) => r.id === this.selectedRegionId);
-    if (idx === -1) return;
+    if (idx === -1) {
+      this.select(direction > 0 ? sorted[0].id : sorted[sorted.length - 1].id);
+      return;
+    }
 
     const newIdx = idx + direction;
     if (newIdx >= 0 && newIdx < sorted.length) {
