@@ -196,52 +196,46 @@
       />
     </section>
   {:else}
-    <section class="panel stack">
-      <div class="field-grid">
-        <div class="field-group">
-          <label class="micro-label" for="project-name">Project Name</label>
-          <input
-            id="project-name"
-            type="text"
-            bind:value={projectStore.current.name}
-            class="input-field"
-          />
-        </div>
+    <section class="panel project-bar">
+      <input
+        type="text"
+        bind:value={projectStore.current.name}
+        class="project-name-input"
+        placeholder="Untitled project"
+      />
 
-        <div class="field-group">
-          <span class="micro-label">Audio File</span>
-          {#if projectStore.current.audio_file}
-            <span class="status-pill audio-file-pill"
-              >{projectStore.current.audio_file}</span
-            >
-          {:else}
-            <input
-              type="file"
-              onchange={handleAudioChange}
-              class="file-input"
-            />
-          {/if}
-        </div>
-
-        <div class="action-row">
-          <button class="btn btn-outline" onclick={() => projectStore.download()}>
-            <Download size={16} /> JSON
-          </button>
-          <button class="btn btn-success" onclick={handleSaveProject}>
-            <Save size={16} /> Save
-          </button>
-          <button
-            class="btn btn-danger"
-            onclick={() => projectStore.close()}
-          >
-            <X size={16} /> Close
-          </button>
-        </div>
-      </div>
+      {#if projectStore.current.audio_file}
+        <span class="audio-pill" title={projectStore.current.audio_file}>
+          <Music size={13} />
+          <span class="audio-pill-text">{projectStore.current.audio_file}</span>
+        </span>
+      {:else}
+        <input type="file" onchange={handleAudioChange} class="file-input" />
+      {/if}
 
       {#if saveNotice}
         <span class="status-pill muted">{saveNotice}</span>
       {/if}
+
+      <div class="toolbar-group project-actions">
+        <button
+          class="btn-ghost"
+          onclick={() => projectStore.download()}
+          title="Download JSON"
+        >
+          <Download size={16} />
+        </button>
+        <button class="btn-ghost" onclick={handleSaveProject} title="Save project">
+          <Save size={16} />
+        </button>
+        <button
+          class="btn-ghost btn-ghost-danger"
+          onclick={() => projectStore.close()}
+          title="Close project"
+        >
+          <X size={16} />
+        </button>
+      </div>
     </section>
 
     <section class="panel stage-panel">
@@ -253,84 +247,84 @@
       />
     </section>
 
-    <section class="panel panel-muted">
-      <div class="control-grid">
-        <div class="button-cluster">
-          <button class="btn btn-secondary" onclick={() => waveformRef?.playPause()}>
-            <Play size={16} /> Play / Pause
-          </button>
+    <section class="panel panel-muted toolbar">
+      <div class="toolbar-group">
+        <button
+          class="btn btn-secondary btn-icon"
+          onclick={() => waveformRef?.playPause()}
+          title="Play / pause"
+        >
+          <Play size={16} />
+        </button>
 
-          <button
-            class="btn btn-primary"
-            onclick={() => waveformRef?.addRegionAtCurrentTime("C")}
-          >
-            <Plus size={16} /> Add Chord
-          </button>
+        <button
+          class="btn btn-primary"
+          onclick={() => waveformRef?.addRegionAtCurrentTime("C")}
+        >
+          <Plus size={16} /> Add Chord
+        </button>
 
-          <button class="btn btn-ai" onclick={triggerAi} title="Identify chord">
-            {#if isAiLoading}
-              <span class="spinner"></span> Analyzing
-            {:else}
-              <Sparkles size={16} /> AI Detect
-            {/if}
-          </button>
+        <button class="btn btn-ai" onclick={triggerAi} title="Identify chord">
+          {#if isAiLoading}
+            <span class="spinner"></span> Analyzing
+          {:else}
+            <Sparkles size={16} /> AI Detect
+          {/if}
+        </button>
 
-          <button
-            class="btn btn-outline btn-icon"
-            onclick={() => (showAiSettings = !showAiSettings)}
-            title="AI Settings"
-          >
-            <Settings2 size={16} />
-          </button>
-        </div>
+        <button
+          class="btn-ghost"
+          onclick={() => (showAiSettings = !showAiSettings)}
+          title="AI detection settings"
+        >
+          <Settings2 size={16} />
+        </button>
+      </div>
 
-        <div class="control-group">
-          <span class="micro-label">Synth Volume</span>
-          <div class="control-row">
-            <input
-              type="range"
-              min="-40"
-              max="20"
-              bind:value={synthVolume}
-              oninput={() => waveformRef?.setSynthVolume(synthVolume)}
-              class="range-control"
-            />
-            <button class="btn-ghost" onclick={toggleSynthMute} title="Mute synth">
-              {#if synthMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
-            </button>
-          </div>
-        </div>
+      <div class="toolbar-divider"></div>
 
-        <div class="control-group">
-          <span class="micro-label">Track Volume</span>
-          <div class="control-row">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              bind:value={trackVolume}
-              oninput={() => waveformRef?.setTrackVolume(trackVolume)}
-              class="range-control"
-            />
-            <button class="btn-ghost" onclick={toggleTrackMute} title="Mute track">
-              {#if trackMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
-            </button>
-          </div>
-        </div>
+      <div class="toolbar-group">
+        <button class="btn-ghost" onclick={toggleSynthMute} title="Mute synth">
+          {#if synthMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+        </button>
+        <input
+          type="range"
+          min="-40"
+          max="20"
+          bind:value={synthVolume}
+          oninput={() => waveformRef?.setSynthVolume(synthVolume)}
+          class="range-control range-compact"
+          title="Synth volume"
+        />
 
-        <div class="control-group">
-          <span class="micro-label">Synth Shape</span>
-          <select
-            class="select-control"
-            onchange={(e) => waveformRef?.setOscillator(e.currentTarget.value)}
-          >
-            <option value="triangle">Triangle (soft)</option>
-            <option value="sine">Sine (pure)</option>
-            <option value="square">Square (retro)</option>
-            <option value="sawtooth">Sawtooth (sharp)</option>
-          </select>
-        </div>
+        <button class="btn-ghost" onclick={toggleTrackMute} title="Mute track">
+          {#if trackMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          bind:value={trackVolume}
+          oninput={() => waveformRef?.setTrackVolume(trackVolume)}
+          class="range-control range-compact"
+          title="Track volume"
+        />
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="select-wrap">
+        <select
+          class="select-control"
+          onchange={(e) => waveformRef?.setOscillator(e.currentTarget.value)}
+        >
+          <option value="triangle">Triangle (soft)</option>
+          <option value="sine">Sine (pure)</option>
+          <option value="square">Square (retro)</option>
+          <option value="sawtooth">Sawtooth (sharp)</option>
+        </select>
+        <ChevronDown size={14} class="select-chevron" />
       </div>
 
       {#if showAiSettings}
