@@ -1095,6 +1095,22 @@ select {
   animation: spin 750ms linear infinite;
 }
 
+.waveform-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.waveform-loading .spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .reveal {
   animation: lift-in 160ms ease;
 }

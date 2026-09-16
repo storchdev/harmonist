@@ -170,7 +170,15 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <div bind:this={panelEl} class="relative w-full panel panel-muted flex flex-col gap-3">
-  <div bind:this={container} class="w-full min-h-[128px]"></div>
+  <div class="relative w-full min-h-[128px]">
+    <div bind:this={container} class="w-full min-h-[128px]"></div>
+    {#if audioUrl && !controller?.isReady}
+      <div class="waveform-loading">
+        <span class="spinner"></span>
+        <span>Loading waveform…</span>
+      </div>
+    {/if}
+  </div>
 
   <div class="waveform-controls">
     <div class="control-row control-row-scroll">
