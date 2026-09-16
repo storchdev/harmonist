@@ -673,6 +673,35 @@ select {
   width: 110px;
 }
 
+.chord-length-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chord-length-input {
+  width: 3.1rem;
+  min-height: 38px;
+  padding: 0.5rem 1.35rem 0.5rem 0.5rem;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+
+.chord-length-input::-webkit-inner-spin-button,
+.chord-length-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.chord-length-suffix {
+  position: absolute;
+  right: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
 .volume-synth .range-compact {
   accent-color: var(--amber);
 }

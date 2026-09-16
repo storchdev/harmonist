@@ -26,6 +26,7 @@ export interface EditorSettings {
   synthMuted: boolean;
   trackMuted: boolean;
   oscillator: string;
+  defaultChordLength: number;
   aiSettings: { onset: number; frame: number; minNoteLen: number };
 }
 
@@ -38,6 +39,7 @@ export function defaultEditorSettings(): EditorSettings {
     synthMuted: false,
     trackMuted: false,
     oscillator: "triangle",
+    defaultChordLength: 2.0,
     aiSettings: { onset: 0.6, frame: 0.4, minNoteLen: 100 },
   };
 }

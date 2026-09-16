@@ -54,6 +54,7 @@
   let trackVolume = $state(1);
   let synthMuted = $state(false);
   let trackMuted = $state(false);
+  let defaultChordLength = $state(2.0);
 
   let aiSettings = $state({ onset: 0.6, frame: 0.4, minNoteLen: 100 });
   let isAiLoading = $state(false);
@@ -73,6 +74,7 @@
     trackVolume = s.trackVolume;
     synthMuted = s.synthMuted;
     trackMuted = s.trackMuted;
+    defaultChordLength = s.defaultChordLength;
     aiSettings = { ...s.aiSettings };
   }
 
@@ -82,6 +84,12 @@
     waveformRef?.setTrackVolume(trackVolume);
     waveformRef?.setSynthMuted(synthMuted);
     waveformRef?.setTrackMuted(trackMuted);
+    waveformRef?.setDefaultChordLength(defaultChordLength);
+  }
+
+  function updateDefaultChordLength() {
+    waveformRef?.setDefaultChordLength(defaultChordLength);
+    updateSettings({ defaultChordLength }, { silent: true });
   }
 
   $effect(() => {
@@ -584,6 +592,7 @@
         }}
         initialZoom={projectStore.current.settings?.zoom}
         initialScrollPosition={projectStore.current.settings?.scrollPosition}
+        initialChordLength={projectStore.current.settings?.defaultChordLength}
         onZoomChange={(zoom: number) => updateSettings({ zoom }, { silent: true })}
         onScrollChange={(scrollPosition: number) =>
           updateSettings({ scrollPosition }, { silent: true })}
@@ -611,6 +620,18 @@
         >
           <Plus size={16} /> Add Chord
         </button>
+
+        <div class="chord-length-control" title="Default length for new chords">
+          <input
+            type="number"
+            min="0.2"
+            step="0.1"
+            bind:value={defaultChordLength}
+            oninput={updateDefaultChordLength}
+            class="input-field chord-length-input"
+          />
+          <span class="chord-length-suffix">s</span>
+        </div>
 
         <button
           class="btn btn-outline"

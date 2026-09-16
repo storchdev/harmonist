@@ -15,6 +15,7 @@
     onNoteChange,
     initialZoom,
     initialScrollPosition,
+    initialChordLength,
     onZoomChange,
     onScrollChange,
     onReady,
@@ -26,6 +27,7 @@
     onNoteChange: (e: any) => void;
     initialZoom?: number;
     initialScrollPosition?: number;
+    initialChordLength?: number;
     onZoomChange?: (zoom: number) => void;
     onScrollChange?: (position: number) => void;
     onReady?: () => void;
@@ -98,7 +100,7 @@
           noteId: id,
         };
       },
-    }, { initialZoom });
+    }, { initialZoom, initialChordLength });
 
     const unsubscribeScroll = controller.onScrollStateChange((state) => {
       scrollPosition = state.position;
@@ -156,6 +158,8 @@
   export const setSynthMuted = (muted: boolean) => controller?.setSynthMuted(muted);
   export const setTrackMuted = (muted: boolean) => controller?.setTrackMuted(muted);
   export const setOscillator = (t: string) => controller?.setOscillator(t);
+  export const setDefaultChordLength = (v: number) =>
+    controller?.setDefaultChordLength(v);
   export const refreshThemeColors = () => controller?.refreshThemeColors();
 
   export async function askAiForChord(settings: any) {

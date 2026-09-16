@@ -48,7 +48,7 @@ export class WaveformController {
       onEditNote: (id: string) => void;
       onShowNoteContextMenu: (e: MouseEvent, id: string) => void;
     },
-    options: { initialZoom?: number } = {},
+    options: { initialZoom?: number; initialChordLength?: number } = {},
   ) {
     this.onUserInteraction = callbacks.onUserInteraction;
     this.onEditRegion = callbacks.onEditRegion;
@@ -71,6 +71,9 @@ export class WaveformController {
     });
 
     this.regions = new RegionManager(this.ws, callbacks);
+    if (options.initialChordLength !== undefined) {
+      this.regions.setDefaultDuration(options.initialChordLength);
+    }
     this.notes = new NoteManager(this.ws, {
       onNoteChange: callbacks.onNoteChange,
       onEditNote: callbacks.onEditNote,
@@ -265,6 +268,9 @@ export class WaveformController {
   }
   setOscillator(t: any) {
     this.player.setOscillatorType(t);
+  }
+  setDefaultChordLength(v: number) {
+    this.regions.setDefaultDuration(v);
   }
   setSynthVolume(v: number) {
     this.player.setVolume(v);

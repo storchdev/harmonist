@@ -16,6 +16,7 @@ export class RegionManager {
   public selectedRegionId: string | null = null;
   private onRegionChange: (event: any) => void;
   private playheadTime = 0;
+  private defaultDuration = 2.0;
 
   private readonly labelStyle: Partial<CSSStyleDeclaration> = {
     position: "absolute",
@@ -288,7 +289,7 @@ export class RegionManager {
       return;
     }
 
-    let dur = 2.0;
+    let dur = this.defaultDuration;
     const next = this.wsRegions
       .getRegions()
       .filter((r) => r.start > time)
@@ -413,6 +414,10 @@ export class RegionManager {
       if (newEnd - r.start < MIN_DURATION) newEnd = r.start + MIN_DURATION;
       r.setOptions({ end: newEnd });
     }
+  }
+
+  public setDefaultDuration(duration: number) {
+    this.defaultDuration = Math.max(MIN_DURATION, duration);
   }
 
   public getBoundaries() {
