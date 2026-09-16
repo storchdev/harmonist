@@ -124,13 +124,14 @@ export class InputManager {
       if (isLeft || isRight) {
         e.preventDefault();
         const dir = isLeft ? -1 : 1;
+        const step = e.shiftKey ? 0.02 : 0.1;
 
-        if (e.shiftKey) {
-          // Shift in Region Mode = Resize
-          this.controller.regions.nudgeSelected(dir, "resize");
+        if (e.altKey) {
+          // Alt = drag end time; Alt+Shift = drag end time, finer
+          this.controller.regions.nudgeSelected(dir, "resize", step);
         } else {
-          // Arrows in Region Mode = Move
-          this.controller.regions.nudgeSelected(dir, "move");
+          // Plain / Shift = move, Shift for a finer step
+          this.controller.regions.nudgeSelected(dir, "move", step);
         }
         return;
       }

@@ -134,6 +134,8 @@ export class WaveformController {
       this.currentTime = t;
       this.player.stopAll();
       this.onUserInteraction();
+      this.regions.select(null);
+      this.notes.select(null);
       this.regions.setPlayheadTime(t);
     });
 
@@ -282,7 +284,7 @@ export class WaveformController {
   seek(amount: number) {
     const target = Math.max(
       0,
-      Math.min(this.duration, this.currentTime + amount),
+      Math.min(this.duration, this.ws.getCurrentTime() + amount),
     );
     this.ws.setTime(target);
   }
@@ -314,12 +316,14 @@ export class WaveformController {
 
   seekToBoundary(direction: number) {
     const bounds = this.regions.getBoundaries();
+    const epsilon = 0.01;
+    const t = this.ws.getCurrentTime();
     let target;
     if (direction < 0) {
-      target = bounds.reverse().find((t) => t < this.currentTime - 0.05);
+      target = bounds.reverse().find((b) => b < t - epsilon);
       if (target === undefined) target = 0;
     } else {
-      target = bounds.find((t) => t > this.currentTime + 0.05);
+      target = bounds.find((b) => b > t + epsilon);
       if (target === undefined) target = this.duration;
     }
     this.ws.setTime(target);

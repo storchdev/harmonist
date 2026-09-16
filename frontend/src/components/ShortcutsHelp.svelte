@@ -12,6 +12,8 @@
         ["→ / l", "Seek forward"],
         ["Shift + ← / →", "Seek by small step"],
         ["[ / ]", "Jump to previous / next region boundary"],
+        ["M", "Mute / unmute track"],
+        ["Shift + M", "Mute / unmute synth"],
       ],
     },
     {
@@ -28,7 +30,9 @@
       title: "Selected region",
       rows: [
         ["← / h · → / l", "Move region"],
-        ["Shift + ← / →", "Resize region"],
+        ["Shift + ← / →", "Move region (fine)"],
+        ["Alt + ← / →", "Drag end time"],
+        ["Alt + Shift + ← / →", "Drag end time (fine)"],
       ],
     },
     {

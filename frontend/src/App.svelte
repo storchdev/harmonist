@@ -327,6 +327,15 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       projectStore.undo();
+      return;
+    }
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "m") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        toggleSynthMute();
+      } else {
+        toggleTrackMute();
+      }
     }
   }
 

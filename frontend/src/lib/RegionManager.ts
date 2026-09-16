@@ -381,22 +381,28 @@ export class RegionManager {
 
     const idx = sorted.findIndex((r) => r.id === this.selectedRegionId);
     if (idx === -1) {
-      this.select(direction > 0 ? sorted[0].id : sorted[sorted.length - 1].id);
+      const t = this.playheadTime;
+      const closest = sorted.reduce((best, r) => {
+        const center = (r.start + r.end) / 2;
+        const bestCenter = (best.start + best.end) / 2;
+        return Math.abs(center - t) < Math.abs(bestCenter - t) ? r : best;
+      }, sorted[0]);
+      this.select(closest.id);
       return;
     }
 
-    const newIdx = idx + direction;
-    if (newIdx >= 0 && newIdx < sorted.length) {
-      this.select(sorted[newIdx].id);
-    }
+    const newIdx = (idx + direction + sorted.length) % sorted.length;
+    this.select(sorted[newIdx].id);
   }
 
-  public nudgeSelected(direction: number, mode: "move" | "resize") {
+  public nudgeSelected(
+    direction: number,
+    mode: "move" | "resize",
+    step = 0.1,
+  ) {
     if (!this.selectedRegionId) return;
     const r = this.get(this.selectedRegionId);
     if (!r) return;
-
-    const step = 0.1;
 
     if (mode === "move") {
       const newStart = r.start + step * direction;

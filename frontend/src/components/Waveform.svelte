@@ -185,6 +185,13 @@
     controller?.handleShortcut(e);
   }
 
+  function autofocus(node: HTMLElement) {
+    node.focus();
+    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+      node.select();
+    }
+  }
+
   function startEditing(id: string) {
     const r = regionsData.find((reg: ChordRegion) => reg.id === id);
     if (!r) return;
@@ -349,6 +356,7 @@
         <label class="micro-label" for="edit-chord-symbol">Chord Symbol</label>
         <input
           id="edit-chord-symbol"
+          use:autofocus
           bind:value={editState.value}
           oninput={() => (isInvalid = false)}
           class="input-field"
@@ -410,6 +418,7 @@
         <label class="micro-label" for="edit-note-text">Note Text</label>
         <textarea
           id="edit-note-text"
+          use:autofocus
           bind:value={noteEditState.text}
           class="input-field note-textarea"
           placeholder="Enter a note"
