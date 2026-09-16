@@ -233,8 +233,16 @@ select {
 
 .action-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.action-row .btn,
+.action-row .dropdown,
+.action-row .dropdown .btn {
+  width: 100%;
 }
 
 .stack {
@@ -1128,10 +1136,6 @@ select {
     gap: 0.8rem;
   }
 
-  .action-row {
-    width: 100%;
-  }
-
   .project-bar {
     flex-direction: column;
     align-items: stretch;
@@ -1180,30 +1184,9 @@ select {
     width: 100%;
   }
 
-  .empty-state .action-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .empty-state .action-row .btn,
-  .empty-state .action-row .dropdown,
-  .empty-state .action-row .dropdown .btn {
-    width: 100%;
-  }
-
-  .action-row .btn,
   .button-cluster .btn {
     flex: 1;
     min-width: 130px;
-  }
-
-  .action-row .dropdown {
-    flex: 1;
-    min-width: 130px;
-  }
-
-  .action-row .dropdown .btn {
-    width: 100%;
   }
 
   .dropdown-menu {
