@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Settings2, X } from "@lucide/svelte";
 
-  let { settings, onClose } = $props<{
+  let { settings, onClose, onChange } = $props<{
     settings: { onset: number; frame: number; minNoteLen: number };
     onClose: () => void;
+    onChange?: () => void;
   }>();
 </script>
 
@@ -31,6 +32,7 @@
       max="0.9"
       step="0.05"
       bind:value={settings.onset}
+      oninput={() => onChange?.()}
       class="range-control"
     />
   </div>
@@ -46,6 +48,7 @@
       max="0.9"
       step="0.05"
       bind:value={settings.frame}
+      oninput={() => onChange?.()}
       class="range-control"
     />
   </div>
@@ -61,6 +64,7 @@
       max="300"
       step="10"
       bind:value={settings.minNoteLen}
+      oninput={() => onChange?.()}
       class="range-control"
     />
   </div>

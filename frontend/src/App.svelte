@@ -6,6 +6,7 @@
   import AiSettings from "./components/AiSettings.svelte";
   import ShortcutsHelp from "./components/ShortcutsHelp.svelte";
   import LoadProjectModal from "./components/LoadProjectModal.svelte";
+  import type { EditorSettings } from "./types";
   import {
     bundledThemes,
     bundledThemesInfo,
@@ -56,6 +57,40 @@
 
   let aiSettings = $state({ onset: 0.6, frame: 0.4, minNoteLen: 100 });
   let isAiLoading = $state(false);
+  let syncedProjectId = $state<string | null>(null);
+
+  function updateSettings(partial: Partial<EditorSettings>, opts: { silent?: boolean } = {}) {
+    if (!projectStore.current?.settings) return;
+    Object.assign(projectStore.current.settings, partial);
+    if (!opts.silent) projectStore.dirty = true;
+  }
+
+  function syncSettingsFromProject() {
+    const s = projectStore.current?.settings;
+    if (!s) return;
+    oscillator = s.oscillator;
+    synthVolume = s.synthVolume;
+    trackVolume = s.trackVolume;
+    synthMuted = s.synthMuted;
+    trackMuted = s.trackMuted;
+    aiSettings = { ...s.aiSettings };
+  }
+
+  function applySettingsToController() {
+    waveformRef?.setOscillator(oscillator);
+    waveformRef?.setSynthVolume(synthVolume);
+    waveformRef?.setTrackVolume(trackVolume);
+    waveformRef?.setSynthMuted(synthMuted);
+    waveformRef?.setTrackMuted(trackMuted);
+  }
+
+  $effect(() => {
+    const id = projectStore.current?.id;
+    if (id && id !== syncedProjectId) {
+      syncedProjectId = id;
+      syncSettingsFromProject();
+    }
+  });
 
   let importInput = $state<HTMLInputElement | undefined>();
 
@@ -312,6 +347,7 @@
     oscillator = value;
     showSynthMenu = false;
     waveformRef?.setOscillator(value);
+    updateSettings({ oscillator: value }, { silent: true });
   }
 
   async function triggerAi() {
@@ -341,11 +377,13 @@
   function toggleSynthMute() {
     synthMuted = !synthMuted;
     waveformRef?.setSynthMuted(synthMuted);
+    updateSettings({ synthMuted }, { silent: true });
   }
 
   function toggleTrackMute() {
     trackMuted = !trackMuted;
     waveformRef?.setTrackMuted(trackMuted);
+    updateSettings({ trackMuted }, { silent: true });
   }
 
   async function handleSaveProject() {
@@ -535,6 +573,12 @@
             projectStore.current!.notes.sort((a, b) => a.time - b.time);
           }
         }}
+        initialZoom={projectStore.current.settings?.zoom}
+        initialScrollPosition={projectStore.current.settings?.scrollPosition}
+        onZoomChange={(zoom: number) => updateSettings({ zoom }, { silent: true })}
+        onScrollChange={(scrollPosition: number) =>
+          updateSettings({ scrollPosition }, { silent: true })}
+        onReady={applySettingsToController}
       />
     </section>
 
@@ -596,7 +640,10 @@
             min="-40"
             max="20"
             bind:value={synthVolume}
-            oninput={() => waveformRef?.setSynthVolume(synthVolume)}
+            oninput={() => {
+              waveformRef?.setSynthVolume(synthVolume);
+              updateSettings({ synthVolume }, { silent: true });
+            }}
             class="range-control range-compact"
           />
         </div>
@@ -612,7 +659,10 @@
             max="1"
             step="0.01"
             bind:value={trackVolume}
-            oninput={() => waveformRef?.setTrackVolume(trackVolume)}
+            oninput={() => {
+              waveformRef?.setTrackVolume(trackVolume);
+              updateSettings({ trackVolume }, { silent: true });
+            }}
             class="range-control range-compact"
           />
         </div>
@@ -645,6 +695,8 @@
         <AiSettings
           settings={aiSettings}
           onClose={() => (showAiSettings = false)}
+          onChange={() =>
+            updateSettings({ aiSettings: { ...aiSettings } }, { silent: true })}
         />
       {/if}
     </section>

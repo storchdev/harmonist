@@ -9,6 +9,7 @@ export type WaveformScrollState = {
   position: number;
   max: number;
   canScroll: boolean;
+  zoom: number;
 };
 
 export class WaveformController {
@@ -47,11 +48,13 @@ export class WaveformController {
       onEditNote: (id: string) => void;
       onShowNoteContextMenu: (e: MouseEvent, id: string) => void;
     },
+    options: { initialZoom?: number } = {},
   ) {
     this.onUserInteraction = callbacks.onUserInteraction;
     this.onEditRegion = callbacks.onEditRegion;
     this.onEditNote = callbacks.onEditNote;
     this.player = new ChordPlayer();
+    this.zoomLevel = options.initialZoom ?? 50;
 
     const styles = getComputedStyle(document.documentElement);
 
@@ -63,7 +66,7 @@ export class WaveformController {
         styles.getPropertyValue("--wave-progress-color").trim() || "#6366f1",
       height: 128,
       normalize: true,
-      minPxPerSec: 50,
+      minPxPerSec: this.zoomLevel,
       hideScrollbar: true,
     });
 
@@ -351,6 +354,7 @@ export class WaveformController {
       position,
       max,
       canScroll: max > 0,
+      zoom: this.zoomLevel,
     };
   }
 

@@ -17,6 +17,31 @@ export interface TimelineNote {
   text: string;
 }
 
+// Editor/UI preferences that travel with the project rather than the browser.
+export interface EditorSettings {
+  zoom: number;
+  scrollPosition: number;
+  synthVolume: number;
+  trackVolume: number;
+  synthMuted: boolean;
+  trackMuted: boolean;
+  oscillator: string;
+  aiSettings: { onset: number; frame: number; minNoteLen: number };
+}
+
+export function defaultEditorSettings(): EditorSettings {
+  return {
+    zoom: 50,
+    scrollPosition: 0,
+    synthVolume: -10,
+    trackVolume: 1,
+    synthMuted: false,
+    trackMuted: false,
+    oscillator: "triangle",
+    aiSettings: { onset: 0.6, frame: 0.4, minNoteLen: 100 },
+  };
+}
+
 // The structure of the full save file
 export interface ProjectData {
   id: string;
@@ -25,6 +50,7 @@ export interface ProjectData {
   regions: ChordRegion[];
   notes: TimelineNote[];
   bpm: number;
+  settings?: EditorSettings;
   last_modified?: string;
 }
 

@@ -1,8 +1,21 @@
 import { Api } from "./api";
-import type { ProjectData, RegionChangeEvent, TimelineNote } from "../types";
+import {
+  defaultEditorSettings,
+  type ProjectData,
+  type RegionChangeEvent,
+  type TimelineNote,
+} from "../types";
 
 function withDefaults(data: ProjectData): ProjectData {
   if (!Array.isArray(data.notes)) data.notes = [];
+  data.settings = {
+    ...defaultEditorSettings(),
+    ...data.settings,
+    aiSettings: {
+      ...defaultEditorSettings().aiSettings,
+      ...data.settings?.aiSettings,
+    },
+  };
   return data;
 }
 

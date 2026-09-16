@@ -7,14 +7,29 @@
   import { parseChordInput } from "../lib/chordParsing";
   import { X, Pencil, Trash2, Sparkles, StickyNote } from "@lucide/svelte";
 
-  let { audioUrl, regionsData, onRegionChange, notesData, onNoteChange } =
-    $props<{
-      audioUrl: string;
-      regionsData: ChordRegion[];
-      onRegionChange: (e: any) => void;
-      notesData: TimelineNote[];
-      onNoteChange: (e: any) => void;
-    }>();
+  let {
+    audioUrl,
+    regionsData,
+    onRegionChange,
+    notesData,
+    onNoteChange,
+    initialZoom,
+    initialScrollPosition,
+    onZoomChange,
+    onScrollChange,
+    onReady,
+  } = $props<{
+    audioUrl: string;
+    regionsData: ChordRegion[];
+    onRegionChange: (e: any) => void;
+    notesData: TimelineNote[];
+    onNoteChange: (e: any) => void;
+    initialZoom?: number;
+    initialScrollPosition?: number;
+    onZoomChange?: (zoom: number) => void;
+    onScrollChange?: (position: number) => void;
+    onReady?: () => void;
+  }>();
 
   let container = $state<HTMLElement>();
   let panelEl = $state<HTMLElement>();
@@ -35,10 +50,11 @@
   let noteContextMenu = $state<{ x: number; y: number; noteId: string } | null>(
     null,
   );
-  let currentZoom = $state(50);
+  let currentZoom = $state(initialZoom ?? 50);
   let scrollPosition = $state(0);
   let maxScroll = $state(1);
   let canScroll = $state(false);
+  let hasAppliedInitialViewState = false;
 
   // Validation State
   let isInvalid = $state(false);
@@ -82,12 +98,17 @@
           noteId: id,
         };
       },
-    });
+    }, { initialZoom });
 
     const unsubscribeScroll = controller.onScrollStateChange((state) => {
       scrollPosition = state.position;
       maxScroll = state.max > 0 ? state.max : 1;
       canScroll = state.canScroll;
+      if (state.zoom !== currentZoom) {
+        currentZoom = state.zoom;
+        onZoomChange?.(state.zoom);
+      }
+      onScrollChange?.(state.position);
     });
 
     return () => {
@@ -97,7 +118,21 @@
   });
 
   $effect(() => {
-    if (controller && audioUrl) controller.load(audioUrl);
+    if (controller && audioUrl) {
+      hasAppliedInitialViewState = false;
+      if (initialZoom !== undefined) currentZoom = initialZoom;
+      controller.load(audioUrl);
+    }
+  });
+  $effect(() => {
+    if (controller && controller.isReady) {
+      if (!hasAppliedInitialViewState) {
+        hasAppliedInitialViewState = true;
+        if (initialZoom !== undefined) controller.setZoom(initialZoom);
+        if (initialScrollPosition) controller.setScrollPosition(initialScrollPosition);
+      }
+      onReady?.();
+    }
   });
   $effect(() => {
     if (controller && controller.isReady && regionsData)
