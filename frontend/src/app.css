@@ -178,6 +178,10 @@ select {
   box-shadow: none;
 }
 
+.stage-panel .panel-muted {
+  padding: 0.5rem;
+}
+
 .panel-title {
   margin: 0;
   font-size: 0.95rem;
@@ -751,7 +755,7 @@ select {
 }
 
 .stage-panel {
-  padding: 0.9rem;
+  padding: 0;
 }
 
 /* Dropdown */

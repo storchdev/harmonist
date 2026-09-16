@@ -549,7 +549,7 @@
       </div>
     </section>
 
-    <section class="panel stage-panel">
+    <section class="stage-panel">
       <Waveform
         bind:this={waveformRef}
         audioUrl={projectStore.audioUrl || ""}
