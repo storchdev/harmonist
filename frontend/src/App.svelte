@@ -20,6 +20,7 @@
     VolumeX,
     Sun,
     Moon,
+    ChevronDown,
   } from "@lucide/svelte";
 
   let showLoadMenu = $state(false);
@@ -56,9 +57,19 @@
     applyTheme();
   }
 
-  async function openLoadMenu() {
+  async function toggleLoadMenu() {
+    if (showLoadMenu) {
+      showLoadMenu = false;
+      return;
+    }
     projectList = await Api.projects.list();
     showLoadMenu = true;
+  }
+
+  function handleWindowClick(e: MouseEvent) {
+    if (showLoadMenu && !(e.target as HTMLElement).closest(".dropdown")) {
+      showLoadMenu = false;
+    }
   }
 
   async function triggerAi() {
@@ -119,6 +130,8 @@
   });
 </script>
 
+<svelte:window onclick={handleWindowClick} />
+
 <main class="app-shell">
   <header class="app-header">
     <div class="brand">
@@ -142,9 +155,32 @@
           <button class="btn btn-primary" onclick={() => projectStore.create()}>
             <FilePlus size={16} /> New Project
           </button>
-          <button class="btn btn-secondary" onclick={openLoadMenu}>
-            <FolderOpen size={16} /> Load Existing
-          </button>
+          <div class="dropdown">
+            <button class="btn btn-secondary" onclick={toggleLoadMenu}>
+              <FolderOpen size={16} /> Load Existing
+              <ChevronDown size={14} />
+            </button>
+            {#if showLoadMenu}
+              <div class="dropdown-menu">
+                {#if projectList.length === 0}
+                  <p class="dropdown-empty">No projects found yet.</p>
+                {:else}
+                  {#each projectList as p}
+                    <button
+                      class="dropdown-item"
+                      onclick={() => {
+                        projectStore.load(p.id);
+                        showLoadMenu = false;
+                      }}
+                    >
+                      <span class="dropdown-item-name">{p.name}</span>
+                      <span class="dropdown-item-id">{p.id.slice(0, 4)}</span>
+                    </button>
+                  {/each}
+                {/if}
+              </div>
+            {/if}
+          </div>
           <button class="btn btn-outline" onclick={handleImportClick}>
             <Upload size={16} /> Import JSON
           </button>
@@ -159,44 +195,6 @@
         onchange={handleImportChange}
       />
     </section>
-
-    {#if showLoadMenu}
-      <button
-        type="button"
-        class="modal-backdrop"
-        onclick={() => (showLoadMenu = false)}
-        aria-label="Close project picker"
-      ></button>
-      <div class="modal-card compact">
-        <div class="modal-header">
-          <h2 class="modal-title">Select Project</h2>
-          <button class="close-ghost" onclick={() => (showLoadMenu = false)}>
-            <X size={16} />
-          </button>
-        </div>
-
-        {#if projectList.length === 0}
-          <p class="panel-copy">No projects found yet.</p>
-        {:else}
-          <ul class="stack">
-            {#each projectList as p}
-              <li>
-                <button
-                  class="btn btn-outline w-full flex justify-between items-center"
-                  onclick={() => {
-                    projectStore.load(p.id);
-                    showLoadMenu = false;
-                  }}
-                >
-                  <span>{p.name}</span>
-                  <span class="micro-label">{p.id.slice(0, 4)}...</span>
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    {/if}
   {:else}
     <section class="panel stack">
       <div class="field-grid">
