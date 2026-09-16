@@ -5,7 +5,11 @@
   import Waveform from "./components/Waveform.svelte";
   import AiSettings from "./components/AiSettings.svelte";
   import ShortcutsHelp from "./components/ShortcutsHelp.svelte";
-  import * as catppuccin from "@catppuccin/palette";
+  import {
+    bundledThemes,
+    bundledThemesInfo,
+    type BundledTheme,
+  } from "shiki/themes";
   import {
     Music,
     FolderOpen,
@@ -71,14 +75,14 @@
   function toggleTheme() {
     theme = theme === "dark" ? "light" : "dark";
     applyTheme();
-    applyPalette();
+    void applyPalette();
   }
 
   // --- Color themes ---
-  // Catppuccin's flavors come straight from the official @catppuccin/palette
-  // package; Tokyo Night and Rosé Pine don't have a maintained raw-palette
-  // package (only editor-theme bundles), so their canonical published hex
-  // values are used directly instead.
+  // Uses shiki's bundled theme collection (65 real editor themes - Tokyo
+  // Night, Catppuccin, Rosé Pine, Dracula, Nord, etc.) as the palette source.
+  // Themes are stratified by shiki's own light/dark classification, so
+  // switching light/dark mode picks from a separate saved theme per mode.
   type RawPalette = {
     bg: string;
     bgElevated: string;
@@ -95,153 +99,32 @@
     danger: string;
   };
 
-  const mocha = catppuccin.flavors.mocha.colors;
-  const latte = catppuccin.flavors.latte.colors;
+  const themeInfoById = new Map(
+    bundledThemesInfo.map((t) => [t.id as BundledTheme, t]),
+  );
+  const lightThemes = bundledThemesInfo.filter((t) => t.type === "light");
+  const darkThemes = bundledThemesInfo.filter((t) => t.type === "dark");
 
-  const themeFamilies: { id: string; label: string; light: RawPalette; dark: RawPalette }[] = [
-    {
-      id: "default",
-      label: "Default",
-      light: {
-        bg: "#f7f7f8",
-        bgElevated: "#ffffff",
-        bgInset: "#f0f0f2",
-        border: "#e4e4e8",
-        borderStrong: "#d4d4da",
-        text: "#17171a",
-        textMuted: "#6b6b76",
-        textFaint: "#9a9aa4",
-        accent: "#4f46e5",
-        secondary: "#0891b2",
-        amber: "#d97706",
-        success: "#16a34a",
-        danger: "#dc2626",
-      },
-      dark: {
-        bg: "#0d0d10",
-        bgElevated: "#17171b",
-        bgInset: "#1e1e23",
-        border: "#26262c",
-        borderStrong: "#34343c",
-        text: "#f2f2f4",
-        textMuted: "#9a9aa4",
-        textFaint: "#6b6b76",
-        accent: "#6366f1",
-        secondary: "#22d3ee",
-        amber: "#f59e0b",
-        success: "#22c55e",
-        danger: "#ef4444",
-      },
-    },
-    {
-      id: "tokyo-night",
-      label: "Tokyo Night",
-      light: {
-        bg: "#e1e2e7",
-        bgElevated: "#ffffff",
-        bgInset: "#dfe0e5",
-        border: "#c4c8da",
-        borderStrong: "#a8afc7",
-        text: "#343b58",
-        textMuted: "#565a6e",
-        textFaint: "#9699a3",
-        accent: "#2e7de9",
-        secondary: "#9854f1",
-        amber: "#8f5e15",
-        success: "#385f0d",
-        danger: "#8c4351",
-      },
-      dark: {
-        bg: "#1a1b26",
-        bgElevated: "#1f2335",
-        bgInset: "#24283b",
-        border: "#292e42",
-        borderStrong: "#3b4261",
-        text: "#c0caf5",
-        textMuted: "#9aa5ce",
-        textFaint: "#565f89",
-        accent: "#7aa2f7",
-        secondary: "#bb9af7",
-        amber: "#e0af68",
-        success: "#9ece6a",
-        danger: "#f7768e",
-      },
-    },
-    {
-      id: "catppuccin",
-      label: "Catppuccin",
-      light: {
-        bg: latte.mantle.hex,
-        bgElevated: latte.base.hex,
-        bgInset: latte.crust.hex,
-        border: latte.surface0.hex,
-        borderStrong: latte.surface1.hex,
-        text: latte.text.hex,
-        textMuted: latte.subtext0.hex,
-        textFaint: latte.overlay1.hex,
-        accent: latte.mauve.hex,
-        secondary: latte.blue.hex,
-        amber: latte.yellow.hex,
-        success: latte.green.hex,
-        danger: latte.red.hex,
-      },
-      dark: {
-        bg: mocha.mantle.hex,
-        bgElevated: mocha.base.hex,
-        bgInset: mocha.surface0.hex,
-        border: mocha.surface1.hex,
-        borderStrong: mocha.surface2.hex,
-        text: mocha.text.hex,
-        textMuted: mocha.subtext0.hex,
-        textFaint: mocha.overlay1.hex,
-        accent: mocha.mauve.hex,
-        secondary: mocha.blue.hex,
-        amber: mocha.yellow.hex,
-        success: mocha.green.hex,
-        danger: mocha.red.hex,
-      },
-    },
-    {
-      id: "rose-pine",
-      label: "Rosé Pine",
-      light: {
-        bg: "#faf4ed",
-        bgElevated: "#fffaf3",
-        bgInset: "#f2e9e1",
-        border: "#dfdad9",
-        borderStrong: "#cecacd",
-        text: "#575279",
-        textMuted: "#797593",
-        textFaint: "#9893a5",
-        accent: "#907aa9",
-        secondary: "#56949f",
-        amber: "#ea9d34",
-        success: "#286983",
-        danger: "#b4637a",
-      },
-      dark: {
-        bg: "#191724",
-        bgElevated: "#1f1d2e",
-        bgInset: "#26233a",
-        border: "#403d52",
-        borderStrong: "#524f67",
-        text: "#e0def4",
-        textMuted: "#908caa",
-        textFaint: "#6e6a86",
-        accent: "#c4a7e7",
-        secondary: "#9ccfd8",
-        amber: "#f6c177",
-        success: "#31748f",
-        danger: "#eb6f92",
-      },
-    },
-  ];
+  const DEFAULT_LIGHT_THEME: BundledTheme = "github-light";
+  const DEFAULT_DARK_THEME: BundledTheme = "tokyo-night";
 
-  let themeFamily = $state(localStorage.getItem("themeFamily") || "default");
+  let lightThemeId = $state<BundledTheme>(
+    (localStorage.getItem("lightThemeId") as BundledTheme) ||
+      DEFAULT_LIGHT_THEME,
+  );
+  let darkThemeId = $state<BundledTheme>(
+    (localStorage.getItem("darkThemeId") as BundledTheme) ||
+      DEFAULT_DARK_THEME,
+  );
   let showAccentMenu = $state(false);
+  let themeSearch = $state("");
+
+  function activeThemeId(): BundledTheme {
+    return theme === "dark" ? darkThemeId : lightThemeId;
+  }
 
   function hexToRgb(hex: string) {
-    const h = hex.replace("#", "");
+    const h = hex.replace("#", "").slice(0, 6);
     const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
     const n = parseInt(full, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
@@ -260,12 +143,88 @@
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  function activeFamily() {
-    return themeFamilies.find((f) => f.id === themeFamily) ?? themeFamilies[0];
+  function findTokenColor(
+    tokenColors: any[] | undefined,
+    targets: string[],
+    fallback: string,
+  ): string {
+    const rules = tokenColors ?? [];
+    for (let i = rules.length - 1; i >= 0; i -= 1) {
+      const rule = rules[i];
+      const scopes: string[] = Array.isArray(rule.scope)
+        ? rule.scope
+        : rule.scope
+          ? [rule.scope]
+          : [];
+      if (!scopes.length || !rule.settings?.foreground) continue;
+      if (
+        scopes.some((scope) =>
+          targets.some(
+            (target) => scope === target || scope.startsWith(`${target}.`),
+          ),
+        )
+      ) {
+        return rule.settings.foreground;
+      }
+    }
+    return fallback;
   }
 
-  function applyPalette() {
-    const raw = activeFamily()[theme];
+  function extractPalette(shikiTheme: any, mode: "light" | "dark"): RawPalette {
+    const colors = shikiTheme.colors ?? {};
+    const tokenColors = shikiTheme.tokenColors;
+
+    const bg = colors["editor.background"] || (mode === "dark" ? "#0d0d10" : "#f7f7f8");
+    const text = colors["editor.foreground"] || (mode === "dark" ? "#f2f2f4" : "#17171a");
+    const surface =
+      colors["sideBar.background"] ||
+      colors["panel.background"] ||
+      colors["editorWidget.background"] ||
+      shade(bg, mode === "dark" ? 0.06 : -0.03);
+    const inset =
+      colors["editorWidget.background"] ||
+      colors["terminal.background"] ||
+      shade(bg, mode === "dark" ? -0.03 : -0.02);
+    const border =
+      colors["panel.border"] ||
+      colors["editorWidget.border"] ||
+      colors["contrastBorder"] ||
+      shade(bg, mode === "dark" ? 0.12 : -0.1);
+    const accent =
+      colors["button.background"] ||
+      colors["focusBorder"]?.slice(0, 7) ||
+      findTokenColor(tokenColors, ["entity.name.function", "support.function"], mode === "dark" ? "#7aa2f7" : "#2e7de9");
+    const secondary = findTokenColor(
+      tokenColors,
+      ["keyword.control", "storage.type", "keyword"],
+      colors["terminal.ansiMagenta"] || accent,
+    );
+
+    return {
+      bg,
+      bgElevated: colors["editor.background"] ? shade(bg, mode === "dark" ? 0.04 : 0.02) : bg,
+      bgInset: inset,
+      border,
+      borderStrong: shade(border, mode === "dark" ? 0.18 : -0.15),
+      text,
+      textMuted: colors["descriptionForeground"] || colors["editorLineNumber.foreground"] || shade(text, mode === "dark" ? -0.3 : 0.3),
+      textFaint: shade(text, mode === "dark" ? -0.5 : 0.5),
+      accent,
+      secondary,
+      amber: findTokenColor(tokenColors, ["constant.numeric", "number"], colors["terminal.ansiYellow"] || "#e0af68"),
+      success: colors["terminal.ansiGreen"] || findTokenColor(tokenColors, ["string"], "#9ece6a"),
+      danger: colors["terminal.ansiRed"] || colors["errorForeground"] || findTokenColor(tokenColors, ["keyword.control"], "#f7768e"),
+    };
+  }
+
+  async function applyPalette() {
+    const id = activeThemeId();
+    const loader = bundledThemes[id];
+    if (!loader) return;
+    const mod = await loader();
+    const shikiTheme = "default" in mod ? (mod as any).default : mod;
+    const raw = extractPalette(shikiTheme, theme);
+
     const strongDir = theme === "dark" ? 0.18 : -0.15;
     const softAlpha = theme === "dark" ? 0.16 : 0.1;
 
@@ -300,11 +259,26 @@
     waveformRef?.refreshThemeColors();
   }
 
-  function selectThemeFamily(id: string) {
-    themeFamily = id;
-    localStorage.setItem("themeFamily", id);
-    applyPalette();
+  function selectTheme(id: BundledTheme) {
+    const info = themeInfoById.get(id);
+    if (!info) return;
+    if (info.type === "light") {
+      lightThemeId = id;
+      localStorage.setItem("lightThemeId", id);
+    } else {
+      darkThemeId = id;
+      localStorage.setItem("darkThemeId", id);
+    }
+    void applyPalette();
     showAccentMenu = false;
+    themeSearch = "";
+  }
+
+  function filteredThemeList() {
+    const list = theme === "dark" ? darkThemes : lightThemes;
+    const q = themeSearch.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((t) => t.displayName.toLowerCase().includes(q));
   }
 
   async function toggleLoadMenu() {
@@ -407,7 +381,7 @@
 
   onMount(() => {
     applyTheme();
-    applyPalette();
+    void applyPalette();
     projectStore.restoreLastProject();
   });
 </script>
@@ -432,28 +406,32 @@
         <button
           class="theme-toggle"
           onclick={() => (showAccentMenu = !showAccentMenu)}
-          title="Theme"
+          title="Theme ({theme} mode)"
         >
           <Palette size={16} />
         </button>
         {#if showAccentMenu}
           <div class="dropdown-menu accent-menu">
-            {#each themeFamilies as family}
-              <button
-                class="dropdown-item"
-                class:active={themeFamily === family.id}
-                onclick={() => selectThemeFamily(family.id)}
-              >
-                <span class="accent-swatch-row">
-                  <span
-                    class="accent-swatch"
-                    style="background:{family[theme].accent}"
-                  ></span>
-                  {family.label}
-                </span>
-                {#if themeFamily === family.id}<Check size={14} />{/if}
-              </button>
-            {/each}
+            <input
+              class="input-field accent-search"
+              type="text"
+              placeholder="Search {theme} themes…"
+              bind:value={themeSearch}
+            />
+            <div class="accent-menu-list">
+              {#each filteredThemeList() as t (t.id)}
+                <button
+                  class="dropdown-item"
+                  class:active={activeThemeId() === t.id}
+                  onclick={() => selectTheme(t.id as BundledTheme)}
+                >
+                  {t.displayName}
+                  {#if activeThemeId() === t.id}<Check size={14} />{/if}
+                </button>
+              {:else}
+                <div class="accent-menu-empty">No matching themes</div>
+              {/each}
+            </div>
           </div>
         {/if}
       </div>

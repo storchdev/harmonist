@@ -19,11 +19,11 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@catppuccin/palette": "^1.8.0",
     "@lucide/svelte": "^1.46.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tonaljs/tonal": "^4.10.0",
     "axios": "^1.13.2",
+    "shiki": "^4.4.3",
     "tailwindcss": "^4.1.18",
     "tone": "^15.1.22",
     "wavesurfer.js": "^7.12.1"

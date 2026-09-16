@@ -814,21 +814,30 @@ select {
 .accent-menu {
   right: 0;
   left: auto;
-  min-width: 190px;
+  min-width: 220px;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.accent-swatch-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
+.accent-search {
+  width: 100%;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
 }
 
-.accent-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  flex: 0 0 auto;
-  box-shadow: 0 0 0 1px var(--border);
+.accent-menu-list {
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.accent-menu-empty {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-faint);
 }
 
 .dropdown-empty {
