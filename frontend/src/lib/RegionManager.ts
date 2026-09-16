@@ -31,7 +31,7 @@ export class RegionManager {
   };
 
   private readonly mainLabelStyle: Partial<CSSStyleDeclaration> = {
-    border: "1px solid rgba(255, 255, 255, 0.25)",
+    border: "2px solid rgba(255, 255, 255, 0.25)",
     borderRadius: "999px",
     background:
       "linear-gradient(135deg, var(--accent), var(--accent-strong))",
@@ -52,7 +52,7 @@ export class RegionManager {
     left: "50%",
     top: "calc(100% + 0.4rem)",
     transform: "translateX(-50%)",
-    border: "1px solid rgba(255, 255, 255, 0.18)",
+    border: "2px solid rgba(255, 255, 255, 0.18)",
     borderRadius: "999px",
     background: "color-mix(in srgb, black 55%, var(--secondary) 18%)",
     backdropFilter: "blur(6px)",
