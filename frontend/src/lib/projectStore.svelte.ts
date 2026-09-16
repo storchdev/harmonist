@@ -46,6 +46,7 @@ export class ProjectStore {
     if (!this.current) return;
     const { filename } = await Api.audio.upload(file);
     this.current.audio_file = filename;
+    this.current.name = file.name.replace(/\.[^./]+$/, "");
     await this.save();
   }
 
