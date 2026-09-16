@@ -795,6 +795,64 @@ select {
   font-family: ui-monospace, monospace;
 }
 
+.accent-menu {
+  right: 0;
+  left: auto;
+  min-width: 176px;
+  padding: 0.6rem;
+}
+
+.accent-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.accent-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 2px solid var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--border);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.accent-swatch:hover {
+  transform: scale(1.08);
+}
+
+.accent-swatch.active {
+  box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--accent);
+}
+
+.accent-custom-row {
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.accent-custom-row input[type="color"] {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .dropdown-empty {
   margin: 0;
   padding: 0.6rem;

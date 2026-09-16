@@ -25,6 +25,7 @@
     Check,
     Keyboard,
     Undo2,
+    Palette,
   } from "@lucide/svelte";
 
   const oscillatorLabels: Record<string, string> = {
@@ -69,6 +70,63 @@
   function toggleTheme() {
     theme = theme === "dark" ? "light" : "dark";
     applyTheme();
+    applyAccent(accentColor);
+  }
+
+  // --- Accent color ---
+  const accentPresets = [
+    "#6366f1", // indigo
+    "#3b82f6", // blue
+    "#0ea5e9", // sky
+    "#10b981", // emerald
+    "#f59e0b", // amber
+    "#f43f5e", // rose
+    "#ec4899", // pink
+    "#8b5cf6", // violet
+  ];
+
+  let accentColor = $state(localStorage.getItem("accentColor") || "#6366f1");
+  let showAccentMenu = $state(false);
+
+  function hexToRgb(hex: string) {
+    const h = hex.replace("#", "");
+    const full = h.length === 3
+      ? h.split("").map((c) => c + c).join("")
+      : h;
+    const n = parseInt(full, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function shade(hex: string, percent: number) {
+    const { r, g, b } = hexToRgb(hex);
+    const t = percent < 0 ? 0 : 255;
+    const p = Math.abs(percent);
+    const mix = (c: number) => Math.round((t - c) * p) + c;
+    return `#${[mix(r), mix(g), mix(b)].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  function withAlpha(hex: string, alpha: number) {
+    const { r, g, b } = hexToRgb(hex);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function applyAccent(hex: string) {
+    const root = document.documentElement.style;
+    root.setProperty("--accent", hex);
+    root.setProperty("--accent-strong", shade(hex, theme === "dark" ? 0.18 : -0.15));
+    root.setProperty("--accent-soft", withAlpha(hex, theme === "dark" ? 0.18 : 0.1));
+    root.setProperty("--focus-ring", withAlpha(hex, theme === "dark" ? 0.4 : 0.35));
+  }
+
+  function selectAccent(hex: string) {
+    accentColor = hex;
+    applyAccent(hex);
+    localStorage.setItem("accentColor", hex);
+    showAccentMenu = false;
+  }
+
+  function handleCustomAccent(e: Event) {
+    selectAccent((e.currentTarget as HTMLInputElement).value);
   }
 
   async function toggleLoadMenu() {
@@ -101,6 +159,9 @@
     }
     if (showSynthMenu && !(e.target as HTMLElement).closest(".synth-dropdown")) {
       showSynthMenu = false;
+    }
+    if (showAccentMenu && !(e.target as HTMLElement).closest(".accent-dropdown")) {
+      showAccentMenu = false;
     }
   }
 
@@ -168,6 +229,7 @@
 
   onMount(() => {
     applyTheme();
+    applyAccent(accentColor);
     projectStore.restoreLastProject();
   });
 </script>
@@ -188,6 +250,41 @@
       >
         <Keyboard size={16} />
       </button>
+      <div class="dropdown accent-dropdown">
+        <button
+          class="theme-toggle"
+          onclick={() => (showAccentMenu = !showAccentMenu)}
+          title="Accent color"
+        >
+          <Palette size={16} />
+        </button>
+        {#if showAccentMenu}
+          <div class="dropdown-menu accent-menu">
+            <div class="accent-swatches">
+              {#each accentPresets as hex}
+                <button
+                  class="accent-swatch"
+                  class:active={accentColor.toLowerCase() === hex}
+                  style="background:{hex}"
+                  title={hex}
+                  onclick={() => selectAccent(hex)}
+                >
+                  {#if accentColor.toLowerCase() === hex}<Check size={12} />{/if}
+                </button>
+              {/each}
+            </div>
+            <label class="accent-custom-row">
+              <span>Custom</span>
+              <input
+                type="color"
+                value={accentColor}
+                oninput={handleCustomAccent}
+              />
+            </label>
+          </div>
+        {/if}
+      </div>
+
       <button class="theme-toggle" onclick={toggleTheme} title="Toggle theme">
         {#if theme === "dark"}
           <Sun size={16} />
