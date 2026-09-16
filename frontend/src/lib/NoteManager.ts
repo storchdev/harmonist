@@ -10,21 +10,46 @@ export class NoteManager {
   public selectedNoteId: string | null = null;
   private onNoteChange: (event: any) => void;
 
-  private readonly STICKY_NOTE_SVG = `<svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 3.5A1.5 1.5 0 0 1 5.5 2h9.379a1.5 1.5 0 0 1 1.06.44l3.622 3.62a1.5 1.5 0 0 1 .439 1.061V20.5A1.5 1.5 0 0 1 18.5 22h-13A1.5 1.5 0 0 1 4 20.5v-17Z" fill="#facc15"/><path d="M15 2.2v3.8a1.5 1.5 0 0 0 1.5 1.5h3.8L15 2.2Z" fill="#f59e0b"/></svg>`;
+  private readonly STICKY_NOTE_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
 
-  private createLabelElement(text: string) {
+  // NOTE: this content element is appended inside WaveSurfer's shadow DOM
+  // (RegionsPlugin appends into wavesurfer.getWrapper(), which lives in a
+  // shadow root). The page-level app.css stylesheet cannot cross that
+  // shadow boundary, so layout-critical styling here MUST be applied
+  // inline rather than via CSS classes, or it silently has no effect.
+  private createLabelElement(_text: string) {
     const wrapper = document.createElement("div");
     wrapper.className = "note-marker-content";
+    Object.assign(wrapper.style, {
+      position: "absolute",
+      top: "50%",
+      left: "0",
+      margin: "0",
+      transform: "translate(-50%, -50%)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      pointerEvents: "auto",
+      cursor: "pointer",
+    });
 
     const icon = document.createElement("div");
     icon.className = "note-icon-badge";
     icon.innerHTML = this.STICKY_NOTE_SVG;
+    Object.assign(icon.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "20px",
+      height: "20px",
+      borderRadius: "50%",
+      background: "var(--bg-elevated, #1e1e1e)",
+      border: "1.5px solid var(--amber, #f59e0b)",
+      color: "var(--amber, #f59e0b)",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
+      boxSizing: "border-box",
+    });
     wrapper.appendChild(icon);
-
-    const tooltip = document.createElement("div");
-    tooltip.className = "note-tooltip";
-    tooltip.textContent = text || "Note";
-    wrapper.appendChild(tooltip);
 
     return wrapper;
   }
@@ -46,10 +71,12 @@ export class NoteManager {
     this.wsNotes.on("region-clicked", (note, e) => {
       e.stopPropagation();
       this.select(note.id);
+      cbs.onEditNote(note.id);
     });
 
     this.wsNotes.on("region-double-clicked", (note, e) => {
       e.stopPropagation();
+      this.select(note.id);
       cbs.onEditNote(note.id);
     });
 
@@ -109,8 +136,6 @@ export class NoteManager {
       current.forEach((note) => {
         const saved = byId.get(note.id);
         if (!saved) return;
-        const tooltip = note.content?.querySelector?.(".note-tooltip");
-        if (tooltip) tooltip.textContent = saved.text || "Note";
         this.styleNoteElement(note);
       });
     }
