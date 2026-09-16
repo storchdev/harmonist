@@ -108,6 +108,32 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid var(--bg-elevated);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-faint);
+  background-clip: padding-box;
+}
+
 #app {
   min-height: 100vh;
 }
@@ -954,6 +980,145 @@ select {
 .close-ghost:hover {
   background: var(--bg-inset);
   color: var(--text);
+}
+
+.load-modal {
+  width: min(480px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+}
+
+.load-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.load-search .load-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.65rem;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.load-search-input {
+  width: 100%;
+  padding-left: 2.1rem;
+}
+
+.load-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
+}
+
+.load-project-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 10px;
+}
+
+.load-project-row:hover {
+  background: var(--bg-inset);
+}
+
+.load-project-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.load-project-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.load-project-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.load-project-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.load-project-date {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.load-project-delete {
+  flex: 0 0 auto;
+  margin-right: 0.4rem;
+}
+
+.load-project-confirm {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 0.4rem;
+  white-space: nowrap;
+}
+
+.load-project-confirm-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.icon-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.icon-confirm-yes {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.icon-confirm-yes:hover {
+  background: var(--success);
+  color: var(--bg-elevated);
+}
+
+.icon-confirm-no {
+  background: var(--bg-inset);
+  color: var(--text-muted);
+}
+
+.icon-confirm-no:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .shortcut-groups {

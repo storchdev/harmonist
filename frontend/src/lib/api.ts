@@ -12,6 +12,7 @@ export const Api = {
       (await api.get<ProjectData>(`/projects/${id}`)).data,
     save: async (id: string, data: ProjectData) =>
       await api.put(`/projects/${id}`, data),
+    delete: async (id: string) => await api.delete(`/projects/${id}`),
   },
   audio: {
     upload: async (file: File) => {

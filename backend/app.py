@@ -161,6 +161,15 @@ def save_project(project_id):
     return jsonify({"status": "saved"})
 
 
+@app.route("/api/projects/<project_id>", methods=["DELETE"])
+def delete_project(project_id):
+    path = get_project_path(project_id)
+    if not os.path.exists(path):
+        return jsonify({"error": "Project not found"}), 404
+    os.remove(path)
+    return jsonify({"status": "deleted"})
+
+
 # --- AUDIO HANDLING ---
 # We need this because browsers can't just load "C:\Users\Music\song.mp3" due to security.
 # We serve it via this route.

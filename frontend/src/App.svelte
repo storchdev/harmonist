@@ -5,6 +5,7 @@
   import Waveform from "./components/Waveform.svelte";
   import AiSettings from "./components/AiSettings.svelte";
   import ShortcutsHelp from "./components/ShortcutsHelp.svelte";
+  import LoadProjectModal from "./components/LoadProjectModal.svelte";
   import {
     bundledThemes,
     bundledThemesInfo,
@@ -42,8 +43,7 @@
     sawtooth: "Sawtooth (sharp)",
   };
 
-  let showLoadMenu = $state(false);
-  let projectList = $state<{ id: string; name: string }[]>([]);
+  let showLoadModal = $state(false);
   let showAiSettings = $state(false);
   let showSynthMenu = $state(false);
   let oscillator = $state("triangle");
@@ -280,15 +280,6 @@
     return list.filter((t) => t.displayName.toLowerCase().includes(q));
   }
 
-  async function toggleLoadMenu() {
-    if (showLoadMenu) {
-      showLoadMenu = false;
-      return;
-    }
-    projectList = await Api.projects.list();
-    showLoadMenu = true;
-  }
-
   function handleWindowKeydown(e: KeyboardEvent) {
     const target = e.target as HTMLElement;
     if (
@@ -305,9 +296,6 @@
   }
 
   function handleWindowClick(e: MouseEvent) {
-    if (showLoadMenu && !(e.target as HTMLElement).closest(".dropdown")) {
-      showLoadMenu = false;
-    }
     if (showSynthMenu && !(e.target as HTMLElement).closest(".synth-dropdown")) {
       showSynthMenu = false;
     }
@@ -440,6 +428,16 @@
     <ShortcutsHelp onClose={() => (showShortcuts = false)} />
   {/if}
 
+  {#if showLoadModal}
+    <LoadProjectModal
+      onClose={() => (showLoadModal = false)}
+      onSelect={(id) => {
+        projectStore.load(id);
+        showLoadModal = false;
+      }}
+    />
+  {/if}
+
   {#if !projectStore.current}
     <section class="panel empty-panel">
       <div class="empty-state">
@@ -448,32 +446,9 @@
           <button class="btn btn-primary" onclick={() => projectStore.create()}>
             <FilePlus size={16} /> New Project
           </button>
-          <div class="dropdown">
-            <button class="btn btn-secondary" onclick={toggleLoadMenu}>
-              <FolderOpen size={16} /> Load Existing
-              <ChevronDown size={14} />
-            </button>
-            {#if showLoadMenu}
-              <div class="dropdown-menu">
-                {#if projectList.length === 0}
-                  <p class="dropdown-empty">No projects found yet.</p>
-                {:else}
-                  {#each projectList as p}
-                    <button
-                      class="dropdown-item"
-                      onclick={() => {
-                        projectStore.load(p.id);
-                        showLoadMenu = false;
-                      }}
-                    >
-                      <span class="dropdown-item-name">{p.name}</span>
-                      <span class="dropdown-item-id">{p.id.slice(0, 4)}</span>
-                    </button>
-                  {/each}
-                {/if}
-              </div>
-            {/if}
-          </div>
+          <button class="btn btn-secondary" onclick={() => (showLoadModal = true)}>
+            <FolderOpen size={16} /> Load Existing
+          </button>
           <button class="btn btn-outline" onclick={handleImportClick}>
             <Upload size={16} /> Import JSON
           </button>
