@@ -3,8 +3,8 @@ import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import type { ChordRegion } from "../types";
 
 const MIN_DURATION = 0.1;
-const COLOR_DEFAULT = "color-mix(in srgb, var(--accent) 16%, transparent)";
-const COLOR_SELECTED = "color-mix(in srgb, var(--secondary) 34%, transparent)";
+const COLOR_DEFAULT = "color-mix(in srgb, var(--amber) 32%, transparent)";
+const COLOR_SELECTED = "color-mix(in srgb, var(--amber) 70%, transparent)";
 
 type RegionLabelData = {
   chordSymbol: string;
@@ -34,7 +34,7 @@ export class RegionManager {
     border: "2px solid rgba(255, 255, 255, 0.25)",
     borderRadius: "999px",
     background:
-      "linear-gradient(135deg, color-mix(in srgb, color-mix(in srgb, black 45%, var(--accent) 30%) 62%, transparent), color-mix(in srgb, color-mix(in srgb, black 55%, var(--accent-strong) 25%) 62%, transparent))",
+      "linear-gradient(135deg, color-mix(in srgb, color-mix(in srgb, black 45%, var(--amber) 30%) 62%, transparent), color-mix(in srgb, color-mix(in srgb, black 55%, var(--amber) 25%) 62%, transparent))",
     backdropFilter: "blur(6px)",
     color: "#fff",
     textShadow: "0 1px 2px rgba(0, 0, 0, 0.55)",
@@ -45,7 +45,7 @@ export class RegionManager {
     letterSpacing: "0.01em",
     lineHeight: "1.15",
     boxShadow:
-      "0 3px 10px color-mix(in srgb, var(--accent-strong) 45%, transparent)",
+      "0 3px 10px color-mix(in srgb, var(--amber) 45%, transparent)",
     whiteSpace: "nowrap",
   };
 
