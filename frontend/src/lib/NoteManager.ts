@@ -10,40 +10,23 @@ export class NoteManager {
   public selectedNoteId: string | null = null;
   private onNoteChange: (event: any) => void;
 
-  private readonly labelStyle: Partial<CSSStyleDeclaration> = {
-    position: "absolute",
-    left: "0",
-    top: "4px",
-    transform: "translate(-50%, 0)",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.3rem",
-    border: "2px solid rgba(255, 255, 255, 0.22)",
-    borderRadius: "999px",
-    background:
-      "color-mix(in srgb, color-mix(in srgb, black 45%, var(--amber) 30%) 68%, transparent)",
-    backdropFilter: "blur(6px)",
-    color: "#fff",
-    textShadow: "0 1px 2px rgba(0, 0, 0, 0.55)",
-    padding: "0.15rem 0.55rem",
-    fontSize: "0.78rem",
-    fontWeight: "600",
-    lineHeight: "1.2",
-    whiteSpace: "nowrap",
-    maxWidth: "220px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.35)",
-    cursor: "pointer",
-    pointerEvents: "auto",
-  };
+  private readonly STICKY_NOTE_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
 
   private createLabelElement(text: string) {
-    const label = document.createElement("div");
-    label.className = "note-label-chip";
-    label.textContent = text || "Note";
-    Object.assign(label.style, this.labelStyle);
-    return label;
+    const wrapper = document.createElement("div");
+    wrapper.className = "note-marker-content";
+
+    const icon = document.createElement("div");
+    icon.className = "note-icon-badge";
+    icon.innerHTML = this.STICKY_NOTE_SVG;
+    wrapper.appendChild(icon);
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "note-tooltip";
+    tooltip.textContent = text || "Note";
+    wrapper.appendChild(tooltip);
+
+    return wrapper;
   }
 
   constructor(
@@ -126,9 +109,8 @@ export class NoteManager {
       current.forEach((note) => {
         const saved = byId.get(note.id);
         if (!saved) return;
-        if (note.content instanceof HTMLElement) {
-          note.content.textContent = saved.text || "Note";
-        }
+        const tooltip = note.content?.querySelector?.(".note-tooltip");
+        if (tooltip) tooltip.textContent = saved.text || "Note";
         this.styleNoteElement(note);
       });
     }
