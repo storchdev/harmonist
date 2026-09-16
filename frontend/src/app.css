@@ -569,7 +569,7 @@ select {
 
 .dropdown {
   position: relative;
-  display: inline-flex;
+  display: flex;
 }
 
 .dropdown-menu {
@@ -863,6 +863,21 @@ select {
   .button-cluster .btn {
     flex: 1;
     min-width: 130px;
+  }
+
+  .action-row .dropdown {
+    flex: 1;
+    min-width: 130px;
+  }
+
+  .action-row .dropdown .btn {
+    width: 100%;
+  }
+
+  .dropdown-menu {
+    left: 0;
+    right: 0;
+    width: 100%;
   }
 
   .modal-card,
