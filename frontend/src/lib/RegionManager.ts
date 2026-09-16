@@ -34,8 +34,10 @@ export class RegionManager {
     border: "2px solid rgba(255, 255, 255, 0.25)",
     borderRadius: "999px",
     background:
-      "linear-gradient(135deg, var(--accent), var(--accent-strong))",
+      "linear-gradient(135deg, color-mix(in srgb, color-mix(in srgb, black 45%, var(--accent) 30%) 62%, transparent), color-mix(in srgb, color-mix(in srgb, black 55%, var(--accent-strong) 25%) 62%, transparent))",
+    backdropFilter: "blur(6px)",
     color: "#fff",
+    textShadow: "0 1px 2px rgba(0, 0, 0, 0.55)",
     padding: "0.2rem 0.65rem",
     fontSize: "0.9rem",
     fontWeight: "800",
