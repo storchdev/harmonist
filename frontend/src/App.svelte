@@ -451,7 +451,7 @@
   {/if}
 
   {#if !projectStore.current}
-    <section class="panel">
+    <section class="panel empty-panel">
       <div class="empty-state">
         <span class="empty-icon"><Music size={26} /></span>
         <div class="action-row">
