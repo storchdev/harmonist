@@ -510,7 +510,7 @@ select {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.6rem;
-  padding: 0.7rem 0.85rem;
+  padding: 0.4rem 0.6rem;
 }
 
 .project-name-input {
@@ -755,7 +755,7 @@ select {
 }
 
 .stage-panel {
-  padding: 0;
+  padding: 0.6rem;
 }
 
 /* Dropdown */
