@@ -500,7 +500,7 @@
       />
     </section>
   {:else}
-    <section class="panel project-bar">
+    <section class="panel panel-muted project-bar">
       <input
         type="text"
         bind:value={projectStore.current.name}
