@@ -121,7 +121,7 @@ export class ProjectStore {
 
   private snapshotHistory() {
     if (!this.current) return;
-    this.history.push(structuredClone(this.current.regions));
+    this.history.push($state.snapshot(this.current.regions));
     if (this.history.length > this.maxHistory) this.history.shift();
   }
 

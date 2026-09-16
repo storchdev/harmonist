@@ -20,6 +20,7 @@
         ["Tab / Shift + Tab", "Select next / previous chord"],
         ["A", "Add chord at playhead"],
         ["E / Enter", "Edit selected chord"],
+        ["Esc", "Deselect chord"],
         ["Delete / Backspace", "Delete selected chord"],
       ],
     },

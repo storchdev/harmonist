@@ -38,6 +38,19 @@ export class InputManager {
     const isSpace = e.code === "Space";
     const isDelete = e.key === "Delete" || e.key === "Backspace";
 
+    if (e.key === "Escape") {
+      if (this.controller.hasSelectedRegion()) {
+        e.preventDefault();
+        this.controller.regions.select(null);
+        return;
+      }
+      if (this.controller.hasSelectedNote()) {
+        e.preventDefault();
+        this.controller.deselectNote();
+        return;
+      }
+    }
+
     if (isSpace) {
       e.preventDefault();
       this.controller.playPause();
