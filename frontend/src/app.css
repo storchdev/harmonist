@@ -576,10 +576,6 @@ select {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.25rem 0.65rem 0.25rem 0.25rem;
 }
 
 .volume-tag {
@@ -590,11 +586,6 @@ select {
 
 .range-compact {
   width: 110px;
-}
-
-.volume-control .range-control::-webkit-slider-runnable-track,
-.volume-control .range-control::-moz-range-track {
-  background: var(--border);
 }
 
 .volume-synth .range-compact {
@@ -655,7 +646,7 @@ select {
 .range-control::-webkit-slider-runnable-track {
   height: 0.4rem;
   border-radius: 999px;
-  background: var(--bg-inset);
+  background: var(--border-strong);
   border: 1px solid var(--border);
 }
 
@@ -678,7 +669,7 @@ select {
 .range-control::-moz-range-track {
   height: 0.4rem;
   border-radius: 999px;
-  background: var(--bg-inset);
+  background: var(--border-strong);
   border: 1px solid var(--border);
 }
 
