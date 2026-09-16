@@ -157,6 +157,13 @@
     editState = null;
     isInvalid = false;
   }
+
+  function formatTime(t: number) {
+    if (!isFinite(t) || t < 0) t = 0;
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -166,7 +173,7 @@
 
   <div class="waveform-controls">
     <div class="control-row control-row-scroll">
-      <span class="micro-label">Timeline Scroll</span>
+      <span class="timeline-time">{formatTime(controller?.currentTime ?? 0)}</span>
       <input
         type="range"
         min="0"
@@ -179,6 +186,7 @@
         class="range-control timeline-scroll-control"
         disabled={!canScroll}
       />
+      <span class="timeline-time">{formatTime(controller?.duration ?? 0)}</span>
     </div>
 
     <div class="control-row control-row-zoom">

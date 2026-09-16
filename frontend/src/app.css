@@ -710,8 +710,14 @@ select {
   gap: 0.6rem;
 }
 
-.control-row-scroll .micro-label {
+.timeline-time {
   flex: 0 0 auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  min-width: 2.4rem;
+  text-align: center;
 }
 
 .timeline-scroll-control {
