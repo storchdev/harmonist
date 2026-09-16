@@ -21,11 +21,21 @@
     Sun,
     Moon,
     ChevronDown,
+    Check,
   } from "@lucide/svelte";
+
+  const oscillatorLabels: Record<string, string> = {
+    triangle: "Triangle (soft)",
+    sine: "Sine (pure)",
+    square: "Square (retro)",
+    sawtooth: "Sawtooth (sharp)",
+  };
 
   let showLoadMenu = $state(false);
   let projectList = $state<{ id: string; name: string }[]>([]);
   let showAiSettings = $state(false);
+  let showSynthMenu = $state(false);
+  let oscillator = $state("triangle");
   let waveformRef = $state<Waveform>();
   let synthVolume = $state(-10);
   let trackVolume = $state(1);
@@ -70,6 +80,19 @@
     if (showLoadMenu && !(e.target as HTMLElement).closest(".dropdown")) {
       showLoadMenu = false;
     }
+    if (showSynthMenu && !(e.target as HTMLElement).closest(".synth-dropdown")) {
+      showSynthMenu = false;
+    }
+  }
+
+  function toggleSynthMenu() {
+    showSynthMenu = !showSynthMenu;
+  }
+
+  function selectOscillator(value: string) {
+    oscillator = value;
+    showSynthMenu = false;
+    waveformRef?.setOscillator(value);
   }
 
   async function triggerAi() {
@@ -284,47 +307,59 @@
       <div class="toolbar-divider"></div>
 
       <div class="toolbar-group">
-        <button class="btn-ghost" onclick={toggleSynthMute} title="Mute synth">
-          {#if synthMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
-        </button>
-        <input
-          type="range"
-          min="-40"
-          max="20"
-          bind:value={synthVolume}
-          oninput={() => waveformRef?.setSynthVolume(synthVolume)}
-          class="range-control range-compact"
-          title="Synth volume"
-        />
+        <div class="volume-control volume-synth">
+          <button class="btn-ghost" onclick={toggleSynthMute} title="Mute synth">
+            {#if synthMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+          </button>
+          <span class="volume-tag">Synth</span>
+          <input
+            type="range"
+            min="-40"
+            max="20"
+            bind:value={synthVolume}
+            oninput={() => waveformRef?.setSynthVolume(synthVolume)}
+            class="range-control range-compact"
+          />
+        </div>
 
-        <button class="btn-ghost" onclick={toggleTrackMute} title="Mute track">
-          {#if trackMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
-        </button>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          bind:value={trackVolume}
-          oninput={() => waveformRef?.setTrackVolume(trackVolume)}
-          class="range-control range-compact"
-          title="Track volume"
-        />
+        <div class="volume-control volume-track">
+          <button class="btn-ghost" onclick={toggleTrackMute} title="Mute track">
+            {#if trackMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+          </button>
+          <span class="volume-tag">Track</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            bind:value={trackVolume}
+            oninput={() => waveformRef?.setTrackVolume(trackVolume)}
+            class="range-control range-compact"
+          />
+        </div>
       </div>
 
       <div class="toolbar-divider"></div>
 
-      <div class="select-wrap">
-        <select
-          class="select-control"
-          onchange={(e) => waveformRef?.setOscillator(e.currentTarget.value)}
-        >
-          <option value="triangle">Triangle (soft)</option>
-          <option value="sine">Sine (pure)</option>
-          <option value="square">Square (retro)</option>
-          <option value="sawtooth">Sawtooth (sharp)</option>
-        </select>
-        <ChevronDown size={14} class="select-chevron" />
+      <div class="dropdown synth-dropdown">
+        <button class="btn btn-outline synth-dropdown-btn" onclick={toggleSynthMenu}>
+          {oscillatorLabels[oscillator]}
+          <ChevronDown size={14} />
+        </button>
+        {#if showSynthMenu}
+          <div class="dropdown-menu synth-dropdown-menu">
+            {#each Object.entries(oscillatorLabels) as [value, label]}
+              <button
+                class="dropdown-item"
+                class:active={oscillator === value}
+                onclick={() => selectOscillator(value)}
+              >
+                <span>{label}</span>
+                {#if oscillator === value}<Check size={14} />{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
 
       {#if showAiSettings}
