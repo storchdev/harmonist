@@ -1128,6 +1128,10 @@ select {
     align-items: stretch;
   }
 
+  .project-name-input {
+    flex: 0 0 auto;
+  }
+
   .project-actions {
     margin-left: 0;
     justify-content: flex-end;
