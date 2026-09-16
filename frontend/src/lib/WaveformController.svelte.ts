@@ -248,6 +248,10 @@ export class WaveformController {
     }
   }
 
+  deselectNote() {
+    this.notes.select(null);
+  }
+
   playPause() {
     this.ws.playPause();
   }

@@ -10,7 +10,7 @@ export class NoteManager {
   public selectedNoteId: string | null = null;
   private onNoteChange: (event: any) => void;
 
-  private readonly STICKY_NOTE_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
+  private readonly STICKY_NOTE_SVG = `<svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 3.5A1.5 1.5 0 0 1 5.5 2h9.379a1.5 1.5 0 0 1 1.06.44l3.622 3.62a1.5 1.5 0 0 1 .439 1.061V20.5A1.5 1.5 0 0 1 18.5 22h-13A1.5 1.5 0 0 1 4 20.5v-17Z" fill="#facc15"/><path d="M15 2.2v3.8a1.5 1.5 0 0 0 1.5 1.5h3.8L15 2.2Z" fill="#f59e0b"/></svg>`;
 
   private createLabelElement(text: string) {
     const wrapper = document.createElement("div");
@@ -138,6 +138,7 @@ export class NoteManager {
       this.styleNoteElement(r);
       this.onNoteChange({ id: r.id, time: r.start, text });
     }
+    this.select(null);
   }
 
   public delete(id: string) {

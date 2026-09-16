@@ -211,6 +211,7 @@
 
   function closeNoteEditor() {
     noteEditState = null;
+    controller?.deselectNote();
   }
 
   function handleDeleteNoteContext() {
