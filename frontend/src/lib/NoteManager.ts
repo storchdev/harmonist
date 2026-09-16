@@ -12,7 +12,7 @@ export class NoteManager {
 
   private readonly STICKY_NOTE_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
 
-  private createLabelElement(text: string) {
+  private createLabelElement(_text: string) {
     const wrapper = document.createElement("div");
     wrapper.className = "note-marker-content";
 
@@ -20,11 +20,6 @@ export class NoteManager {
     icon.className = "note-icon-badge";
     icon.innerHTML = this.STICKY_NOTE_SVG;
     wrapper.appendChild(icon);
-
-    const tooltip = document.createElement("div");
-    tooltip.className = "note-tooltip";
-    tooltip.textContent = text || "Note";
-    wrapper.appendChild(tooltip);
 
     return wrapper;
   }
@@ -107,10 +102,6 @@ export class NoteManager {
       });
     } else {
       current.forEach((note) => {
-        const saved = byId.get(note.id);
-        if (!saved) return;
-        const tooltip = note.content?.querySelector?.(".note-tooltip");
-        if (tooltip) tooltip.textContent = saved.text || "Note";
         this.styleNoteElement(note);
       });
     }
