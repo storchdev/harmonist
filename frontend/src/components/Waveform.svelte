@@ -83,6 +83,7 @@
 
   // Public Actions
   export const playPause = () => controller?.playPause();
+  export const isPlaying = () => controller?.isPlaying ?? false;
   export const addRegionAtCurrentTime = (c: string) => controller?.addRegion(c);
   export const setSynthVolume = (v: number) => controller?.setSynthVolume(v);
   export const setTrackVolume = (v: number) => controller?.setTrackVolume(v);

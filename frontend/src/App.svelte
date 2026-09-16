@@ -19,6 +19,7 @@
     Save,
     X,
     Play,
+    Pause,
     Plus,
     Sparkles,
     Settings2,
@@ -565,7 +566,11 @@
           onclick={() => waveformRef?.playPause()}
           title="Play / pause"
         >
-          <Play size={16} />
+          {#if waveformRef?.isPlaying()}
+            <Pause size={16} />
+          {:else}
+            <Play size={16} />
+          {/if}
         </button>
 
         <button
