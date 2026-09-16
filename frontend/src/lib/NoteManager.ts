@@ -10,7 +10,12 @@ export class NoteManager {
   public selectedNoteId: string | null = null;
   private onNoteChange: (event: any) => void;
 
-  private readonly STICKY_NOTE_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
+  private readonly STICKY_NOTE_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
+
+  // Resolved once, since CSS custom properties would need to re-resolve
+  // through the shadow-DOM inheritance chain on every element otherwise.
+  private readonly bgElevated: string;
+  private readonly amberColor: string;
 
   // NOTE: this content element is appended inside WaveSurfer's shadow DOM
   // (RegionsPlugin appends into wavesurfer.getWrapper(), which lives in a
@@ -23,7 +28,7 @@ export class NoteManager {
     Object.assign(wrapper.style, {
       position: "absolute",
       top: "50%",
-      left: "0",
+      left: "1px",
       margin: "0",
       transform: "translate(-50%, -50%)",
       display: "flex",
@@ -40,12 +45,12 @@ export class NoteManager {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      width: "20px",
-      height: "20px",
+      width: "30px",
+      height: "30px",
       borderRadius: "50%",
-      background: "var(--bg-elevated, #1e1e1e)",
-      border: "1.5px solid var(--amber, #f59e0b)",
-      color: "var(--amber, #f59e0b)",
+      background: this.bgElevated,
+      border: `2px solid ${this.amberColor}`,
+      color: this.amberColor,
       boxShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
       boxSizing: "border-box",
     });
@@ -64,6 +69,9 @@ export class NoteManager {
   ) {
     this.wsNotes = ws.registerPlugin(RegionsPlugin.create());
     this.onNoteChange = callbacks.onNoteChange;
+    const styles = getComputedStyle(document.documentElement);
+    this.bgElevated = styles.getPropertyValue("--bg-elevated").trim() || "#17171b";
+    this.amberColor = styles.getPropertyValue("--amber").trim() || "#f59e0b";
     this.setupEvents(callbacks);
   }
 
