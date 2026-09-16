@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import { projectStore } from "./lib/projectStore.svelte";
   import { Api } from "./lib/api";
   import Waveform from "./components/Waveform.svelte";
@@ -56,9 +56,6 @@
 
   let aiSettings = $state({ onset: 0.6, frame: 0.4, minNoteLen: 100 });
   let isAiLoading = $state(false);
-  let saveNotice = $state("");
-
-  let saveNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   let importInput = $state<HTMLInputElement | undefined>();
 
@@ -366,20 +363,11 @@
   async function handleSaveProject() {
     try {
       await projectStore.save();
-      saveNotice = "Project saved";
     } catch (error) {
       console.error("Failed to save project", error);
-      saveNotice = "Could not save project";
+      alert("Could not save project");
     }
-    if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
-    saveNoticeTimer = setTimeout(() => {
-      saveNotice = "";
-    }, 2200);
   }
-
-  onDestroy(() => {
-    if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
-  });
 
   onMount(() => {
     applyTheme();
@@ -505,21 +493,18 @@
       <input
         type="text"
         bind:value={projectStore.current.name}
+        oninput={() => (projectStore.dirty = true)}
         class="project-name-input"
         placeholder="Untitled project"
       />
 
       {#if projectStore.current.audio_file}
         <span class="audio-pill" title={projectStore.current.audio_file}>
-          <Music size={13} />
+          <Music size={16} />
           <span class="audio-pill-text">{projectStore.current.audio_file}</span>
         </span>
       {:else}
         <input type="file" onchange={handleAudioChange} class="file-input" />
-      {/if}
-
-      {#if saveNotice}
-        <span class="status-pill muted">{saveNotice}</span>
       {/if}
 
       <div class="toolbar-group project-actions">
@@ -538,8 +523,15 @@
         >
           <Download size={16} />
         </button>
-        <button class="btn-ghost" onclick={handleSaveProject} title="Save project">
+        <button
+          class="btn-ghost save-btn"
+          onclick={handleSaveProject}
+          title={projectStore.dirty ? "Save project (unsaved changes)" : "Save project"}
+        >
           <Save size={16} />
+          {#if projectStore.dirty}
+            <span class="save-dirty-dot"></span>
+          {/if}
         </button>
         <button
           class="btn-ghost btn-ghost-danger"

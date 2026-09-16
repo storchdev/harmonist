@@ -304,6 +304,13 @@ select {
   box-shadow: 0 0 0 3px var(--danger-soft);
 }
 
+.note-textarea {
+  font-family: inherit;
+  resize: vertical;
+  min-height: 8rem;
+  line-height: 1.5;
+}
+
 .file-input {
   font-size: 0.85rem;
   padding: 0.4rem 0.5rem;
@@ -491,6 +498,21 @@ select {
   color: var(--text-muted);
 }
 
+.save-btn {
+  position: relative;
+}
+
+.save-dirty-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 1.5px solid var(--bg-elevated);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -562,6 +584,10 @@ select {
   color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.audio-pill svg {
+  flex-shrink: 0;
 }
 
 .audio-pill-text {

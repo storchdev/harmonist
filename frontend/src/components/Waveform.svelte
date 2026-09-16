@@ -373,12 +373,13 @@
 
       <div class="field-group">
         <label class="micro-label" for="edit-note-text">Note Text</label>
-        <input
+        <textarea
           id="edit-note-text"
           bind:value={noteEditState.text}
-          class="input-field"
+          class="input-field note-textarea"
           placeholder="Enter a note"
-        />
+          rows="6"
+        ></textarea>
       </div>
 
       <div

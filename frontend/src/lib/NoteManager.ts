@@ -2,13 +2,16 @@ import type WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import type { TimelineNote } from "../types";
 
-const NOTE_COLOR = "color-mix(in srgb, var(--amber) 22%, transparent)";
-const NOTE_COLOR_SELECTED = "color-mix(in srgb, var(--amber) 45%, transparent)";
+const NOTE_COLOR = "var(--amber)";
+const NOTE_COLOR_SELECTED = "var(--amber)";
 
 export class NoteManager {
   private wsNotes: RegionsPlugin;
   public selectedNoteId: string | null = null;
   private onNoteChange: (event: any) => void;
+  // WaveSurfer regions store `content` as the DOM element we hand it, not
+  // the original text, so text must be tracked separately by note id.
+  private textById = new Map<string, string>();
 
   private readonly STICKY_NOTE_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>`;
 
@@ -28,7 +31,6 @@ export class NoteManager {
     Object.assign(wrapper.style, {
       position: "absolute",
       top: "50%",
-      left: "1px",
       margin: "0",
       transform: "translate(-50%, -50%)",
       display: "flex",
@@ -36,6 +38,7 @@ export class NoteManager {
       justifyContent: "center",
       pointerEvents: "auto",
       cursor: "pointer",
+      zIndex: "10",
     });
 
     const icon = document.createElement("div");
@@ -89,7 +92,11 @@ export class NoteManager {
     });
 
     this.wsNotes.on("region-updated", (note) => {
-      this.onNoteChange({ id: note.id, time: note.start, text: note.content });
+      this.onNoteChange({
+        id: note.id,
+        time: note.start,
+        text: this.textById.get(note.id) ?? "",
+      });
     });
 
     this.wsNotes.on("region-created", (note) => {
@@ -117,6 +124,8 @@ export class NoteManager {
   }
 
   public sync(data: TimelineNote[]) {
+    data.forEach((n) => this.textById.set(n.id, n.text));
+
     const current = this.wsNotes.getRegions();
     const byId = new Map(data.map((n) => [n.id, n]));
     const needsRebuild =
@@ -159,6 +168,7 @@ export class NoteManager {
       resize: false,
     });
     this.styleNoteElement(r);
+    this.textById.set(r.id, text);
     this.onNoteChange({ id: r.id, time: r.start, text });
     this.select(r.id);
     return r.id as string;
@@ -169,6 +179,7 @@ export class NoteManager {
     if (r) {
       r.setOptions({ content: this.createLabelElement(text) });
       this.styleNoteElement(r);
+      this.textById.set(id, text);
       this.onNoteChange({ id: r.id, time: r.start, text });
     }
     this.select(null);
@@ -178,6 +189,7 @@ export class NoteManager {
     const r = this.get(id);
     if (r) {
       r.remove();
+      this.textById.delete(id);
       this.onNoteChange({ action: "delete", id });
       this.select(null);
     }
