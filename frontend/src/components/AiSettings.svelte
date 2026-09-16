@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Settings2, X } from "@lucide/svelte";
+
   let { settings, onClose } = $props<{
     settings: { onset: number; frame: number; minNoteLen: number };
     onClose: () => void;
@@ -14,8 +16,8 @@
 
 <div class="modal-card compact">
   <div class="modal-header">
-    <h4 class="modal-title">AI Detection Settings</h4>
-    <button class="close-ghost" onclick={onClose}>x</button>
+    <h4 class="modal-title"><Settings2 size={16} /> AI Detection Settings</h4>
+    <button class="close-ghost" onclick={onClose}><X size={16} /></button>
   </div>
 
   <div class="field-group" style="margin-bottom: 0.8rem;">
@@ -31,7 +33,6 @@
       bind:value={settings.onset}
       class="range-control"
     />
-    <p class="form-note">Higher values detect fewer, clearer note onsets.</p>
   </div>
 
   <div class="field-group" style="margin-bottom: 0.8rem;">
@@ -47,7 +48,6 @@
       bind:value={settings.frame}
       class="range-control"
     />
-    <p class="form-note">Higher values produce shorter note sustain windows.</p>
   </div>
 
   <div class="field-group" style="margin-bottom: 0.9rem;">

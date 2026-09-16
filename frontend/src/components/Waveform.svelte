@@ -5,6 +5,7 @@
   import type { ChordRegion } from "../types";
   import { Chord } from "@tonaljs/tonal";
   import { parseChordInput } from "../lib/chordParsing";
+  import { X, Pencil, Trash2, Sparkles } from "@lucide/svelte";
 
   let { audioUrl, regionsData, onRegionChange } = $props<{
     audioUrl: string;
@@ -198,14 +199,19 @@
       class="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
     >
       <div
-        class="reveal rounded-2xl border px-6 py-3 shadow-2xl flex flex-col items-center"
-        style="background: rgba(255, 248, 235, 0.95); border-color: rgba(177, 118, 30, 0.35); color: #4f3b1d"
+        class="reveal flex flex-col items-center"
+        style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 16px; padding: 0.75rem 1.5rem; box-shadow: var(--shadow-lg); color: var(--text)"
       >
-        <span class="micro-label" style="color: #9a6618">AI Detected</span>
-        <div class="text-2xl font-bold mt-1" style="font-family: Fraunces, serif;">
+        <span class="micro-label" style="color: var(--amber)"
+          ><Sparkles size={12} /> AI Detected</span
+        >
+        <div class="text-2xl font-bold mt-1">
           {aiResult.name}
         </div>
-        <div class="text-sm mt-1 opacity-90" style="font-family: ui-monospace, monospace; color: #5f4e38;">
+        <div
+          class="text-sm mt-1"
+          style="font-family: ui-monospace, monospace; color: var(--text-muted);"
+        >
           {aiResult.notes.join(" - ") || "No notes"}
         </div>
       </div>
@@ -221,8 +227,8 @@
     ></button>
     <div class="modal-card compact">
       <div class="modal-header">
-        <h3 class="modal-title">Edit Chord Region</h3>
-        <button class="close-ghost" onclick={closeEditor}>x</button>
+        <h3 class="modal-title"><Pencil size={16} /> Edit Chord Region</h3>
+        <button class="close-ghost" onclick={closeEditor}><X size={16} /></button>
       </div>
 
       <div class="field-group">
@@ -232,15 +238,11 @@
           bind:value={editState.value}
           oninput={() => (isInvalid = false)}
           class="input-field"
-          style={isInvalid
-            ? "border-color: var(--danger); box-shadow: 0 0 0 4px rgba(162, 70, 70, 0.2);"
-            : ""}
+          class:invalid={isInvalid}
           placeholder="e.g. Cm7"
         />
         {#if isInvalid}
-          <p class="form-note" style="color: #8f3f3f;">
-            Please enter a valid chord symbol.
-          </p>
+          <p class="form-note danger">Please enter a valid chord symbol.</p>
         {/if}
       </div>
 
@@ -284,11 +286,11 @@
     >
       <button
         class="context-item"
-        onclick={() => startEditing(contextMenu!.regionId)}>Edit Chord</button
+        onclick={() => startEditing(contextMenu!.regionId)}
+        ><Pencil size={14} /> Edit Chord</button
       >
-      <button
-        class="context-item danger"
-        onclick={handleDeleteContext}>Delete</button
+      <button class="context-item danger" onclick={handleDeleteContext}
+        ><Trash2 size={14} /> Delete</button
       >
     </div>
     <button

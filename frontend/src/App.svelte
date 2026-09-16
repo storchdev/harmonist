@@ -4,6 +4,23 @@
   import { Api } from "./lib/api";
   import Waveform from "./components/Waveform.svelte";
   import AiSettings from "./components/AiSettings.svelte";
+  import {
+    Music,
+    FolderOpen,
+    FilePlus,
+    Upload,
+    Download,
+    Save,
+    X,
+    Play,
+    Plus,
+    Sparkles,
+    Settings2,
+    Volume2,
+    VolumeX,
+    Sun,
+    Moon,
+  } from "@lucide/svelte";
 
   let showLoadMenu = $state(false);
   let projectList = $state<{ id: string; name: string }[]>([]);
@@ -21,6 +38,23 @@
   let saveNoticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   let importInput = $state<HTMLInputElement | undefined>();
+
+  let theme = $state<"light" | "dark">(
+    (localStorage.getItem("theme") as "light" | "dark") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"),
+  );
+
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }
+
+  function toggleTheme() {
+    theme = theme === "dark" ? "light" : "dark";
+    applyTheme();
+  }
 
   async function openLoadMenu() {
     projectList = await Api.projects.list();
@@ -79,38 +113,42 @@
     if (saveNoticeTimer) clearTimeout(saveNoticeTimer);
   });
 
-  onMount(() => projectStore.restoreLastProject());
+  onMount(() => {
+    applyTheme();
+    projectStore.restoreLastProject();
+  });
 </script>
 
 <main class="app-shell">
   <header class="app-header">
-    <p class="eyebrow">Chord editor</p>
-    <h1 class="app-title">Harmonist</h1>
-    <p class="app-subtitle">
-      Upload audio, review AI chord suggestions, and edit your timeline.
-    </p>
+    <div class="brand">
+      <span class="brand-icon"><Music size={17} /></span>
+      <h1 class="app-title">Harmonist</h1>
+    </div>
+    <button class="theme-toggle" onclick={toggleTheme} title="Toggle theme">
+      {#if theme === "dark"}
+        <Sun size={16} />
+      {:else}
+        <Moon size={16} />
+      {/if}
+    </button>
   </header>
 
   {#if !projectStore.current}
-    <section class="panel panel-muted stack">
-      <div>
-        <h2 class="panel-title">Start a Session</h2>
-        <p class="panel-copy">
-          Create a new chord project, resume previous work, or import a JSON
-          timeline from disk.
-        </p>
-      </div>
-
-      <div class="action-row">
-        <button class="btn btn-primary" onclick={() => projectStore.create()}>
-          New Project
-        </button>
-        <button class="btn btn-secondary" onclick={openLoadMenu}>
-          Load Existing
-        </button>
-        <button class="btn btn-outline" onclick={handleImportClick}>
-          Import JSON
-        </button>
+    <section class="panel">
+      <div class="empty-state">
+        <span class="empty-icon"><Music size={26} /></span>
+        <div class="action-row">
+          <button class="btn btn-primary" onclick={() => projectStore.create()}>
+            <FilePlus size={16} /> New Project
+          </button>
+          <button class="btn btn-secondary" onclick={openLoadMenu}>
+            <FolderOpen size={16} /> Load Existing
+          </button>
+          <button class="btn btn-outline" onclick={handleImportClick}>
+            <Upload size={16} /> Import JSON
+          </button>
+        </div>
       </div>
 
       <input
@@ -133,7 +171,7 @@
         <div class="modal-header">
           <h2 class="modal-title">Select Project</h2>
           <button class="close-ghost" onclick={() => (showLoadMenu = false)}>
-            x
+            <X size={16} />
           </button>
         </div>
 
@@ -189,16 +227,16 @@
 
         <div class="action-row">
           <button class="btn btn-outline" onclick={() => projectStore.download()}>
-            Download JSON
+            <Download size={16} /> JSON
           </button>
           <button class="btn btn-success" onclick={handleSaveProject}>
-            Save Project
+            <Save size={16} /> Save
           </button>
           <button
             class="btn btn-danger"
             onclick={() => projectStore.close()}
           >
-            Close
+            <X size={16} /> Close
           </button>
         </div>
       </div>
@@ -208,11 +246,7 @@
       {/if}
     </section>
 
-    <section class="panel stage-panel stack">
-      <div class="split-header">
-        <h2 class="panel-title">Timeline</h2>
-        <p class="hint">Right click a region for edit actions</p>
-      </div>
+    <section class="panel stage-panel">
       <Waveform
         bind:this={waveformRef}
         audioUrl={projectStore.audioUrl || ""}
@@ -225,23 +259,21 @@
       <div class="control-grid">
         <div class="button-cluster">
           <button class="btn btn-secondary" onclick={() => waveformRef?.playPause()}>
-            Play / Pause
+            <Play size={16} /> Play / Pause
           </button>
 
           <button
             class="btn btn-primary"
             onclick={() => waveformRef?.addRegionAtCurrentTime("C")}
           >
-            Add Chord
+            <Plus size={16} /> Add Chord
           </button>
 
           <button class="btn btn-ai" onclick={triggerAi} title="Identify chord">
             {#if isAiLoading}
-              <span class="flex items-center gap-2"><span class="spinner"></span>
-                Analyzing</span
-              >
+              <span class="spinner"></span> Analyzing
             {:else}
-              <span>AI Detect</span>
+              <Sparkles size={16} /> AI Detect
             {/if}
           </button>
 
@@ -250,39 +282,43 @@
             onclick={() => (showAiSettings = !showAiSettings)}
             title="AI Settings"
           >
-            AI Settings
+            <Settings2 size={16} />
           </button>
         </div>
 
         <div class="control-group">
           <span class="micro-label">Synth Volume</span>
-          <input
-            type="range"
-            min="-40"
-            max="20"
-            bind:value={synthVolume}
-            oninput={() => waveformRef?.setSynthVolume(synthVolume)}
-            class="range-control"
-          />
-          <button class="btn btn-outline" onclick={toggleSynthMute}>
-            {synthMuted ? "Unmute Synth" : "Mute Synth"}
-          </button>
+          <div class="control-row">
+            <input
+              type="range"
+              min="-40"
+              max="20"
+              bind:value={synthVolume}
+              oninput={() => waveformRef?.setSynthVolume(synthVolume)}
+              class="range-control"
+            />
+            <button class="btn-ghost" onclick={toggleSynthMute} title="Mute synth">
+              {#if synthMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+            </button>
+          </div>
         </div>
 
         <div class="control-group">
           <span class="micro-label">Track Volume</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            bind:value={trackVolume}
-            oninput={() => waveformRef?.setTrackVolume(trackVolume)}
-            class="range-control"
-          />
-          <button class="btn btn-outline" onclick={toggleTrackMute}>
-            {trackMuted ? "Unmute Track" : "Mute Track"}
-          </button>
+          <div class="control-row">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              bind:value={trackVolume}
+              oninput={() => waveformRef?.setTrackVolume(trackVolume)}
+              class="range-control"
+            />
+            <button class="btn-ghost" onclick={toggleTrackMute} title="Mute track">
+              {#if trackMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+            </button>
+          </div>
         </div>
 
         <div class="control-group">
