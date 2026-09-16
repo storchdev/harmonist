@@ -859,6 +859,17 @@ select {
     width: 100%;
   }
 
+  .empty-state .action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .empty-state .action-row .btn,
+  .empty-state .action-row .dropdown,
+  .empty-state .action-row .dropdown .btn {
+    width: 100%;
+  }
+
   .action-row .btn,
   .button-cluster .btn {
     flex: 1;
