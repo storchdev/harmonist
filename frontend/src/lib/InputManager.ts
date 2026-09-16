@@ -42,6 +42,13 @@ export class InputManager {
       return;
     }
 
+    if (e.key === "+" || e.key === "=" || e.key === "-" || e.key === "_") {
+      e.preventDefault();
+      const dir = e.key === "-" || e.key === "_" ? -1 : 1;
+      this.controller.modifyZoom(dir * 20);
+      return;
+    }
+
     if (e.key === "Tab") {
       e.preventDefault();
       this.controller.selectNeighborRegion(e.shiftKey ? -1 : 1);
