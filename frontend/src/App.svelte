@@ -4,6 +4,7 @@
   import { Api } from "./lib/api";
   import Waveform from "./components/Waveform.svelte";
   import AiSettings from "./components/AiSettings.svelte";
+  import ShortcutsHelp from "./components/ShortcutsHelp.svelte";
   import {
     Music,
     FolderOpen,
@@ -22,6 +23,7 @@
     Moon,
     ChevronDown,
     Check,
+    Keyboard,
   } from "@lucide/svelte";
 
   const oscillatorLabels: Record<string, string> = {
@@ -36,6 +38,7 @@
   let showAiSettings = $state(false);
   let showSynthMenu = $state(false);
   let oscillator = $state("triangle");
+  let showShortcuts = $state(false);
   let waveformRef = $state<Waveform>();
   let synthVolume = $state(-10);
   let trackVolume = $state(1);
@@ -161,14 +164,27 @@
       <span class="brand-icon"><Music size={17} /></span>
       <h1 class="app-title">Harmonist</h1>
     </div>
-    <button class="theme-toggle" onclick={toggleTheme} title="Toggle theme">
-      {#if theme === "dark"}
-        <Sun size={16} />
-      {:else}
-        <Moon size={16} />
-      {/if}
-    </button>
+    <div class="header-actions">
+      <button
+        class="theme-toggle"
+        onclick={() => (showShortcuts = true)}
+        title="Keyboard shortcuts"
+      >
+        <Keyboard size={16} />
+      </button>
+      <button class="theme-toggle" onclick={toggleTheme} title="Toggle theme">
+        {#if theme === "dark"}
+          <Sun size={16} />
+        {:else}
+          <Moon size={16} />
+        {/if}
+      </button>
+    </div>
   </header>
+
+  {#if showShortcuts}
+    <ShortcutsHelp onClose={() => (showShortcuts = false)} />
+  {/if}
 
   {#if !projectStore.current}
     <section class="panel">
