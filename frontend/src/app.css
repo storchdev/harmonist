@@ -179,7 +179,7 @@ select {
 }
 
 .stage-panel .panel-muted {
-  padding: 0.5rem;
+  padding: 1.1rem;
 }
 
 .panel-title {
@@ -755,7 +755,7 @@ select {
 }
 
 .stage-panel {
-  padding: 0.6rem;
+  padding: 0;
 }
 
 /* Dropdown */
