@@ -33,6 +33,8 @@ export class InputManager {
 
     const isLeft = e.key === "ArrowLeft" || e.key.toLowerCase() === "h";
     const isRight = e.key === "ArrowRight" || e.key.toLowerCase() === "l";
+    const isPrevBoundary = e.key === "[";
+    const isNextBoundary = e.key === "]";
     const isSpace = e.code === "Space";
     const isDelete = e.key === "Delete" || e.key === "Backspace";
 
@@ -72,15 +74,21 @@ export class InputManager {
       return;
     }
 
+    if (isPrevBoundary || isNextBoundary) {
+      // [ / ] = Boundary Jump (not Ctrl+Arrow, which browsers intercept
+      // for back/forward navigation)
+      e.preventDefault();
+      this.controller.seekToBoundary(isPrevBoundary ? -1 : 1);
+      return;
+    }
+
     // 1. REGION MODE (Precise Editing)
     if (this.controller.hasSelectedRegion()) {
       if (isLeft || isRight) {
         e.preventDefault();
         const dir = isLeft ? -1 : 1;
 
-        if (e.ctrlKey) {
-          this.controller.selectNeighborRegion(dir);
-        } else if (e.shiftKey) {
+        if (e.shiftKey) {
           // Shift in Region Mode = Resize
           this.controller.regions.nudgeSelected(dir, "resize");
         } else {
@@ -102,10 +110,7 @@ export class InputManager {
     if (isLeft || isRight) {
       const dir = isLeft ? -1 : 1;
 
-      if (e.ctrlKey) {
-        // Ctrl = Boundary Jump
-        this.controller.seekToBoundary(dir);
-      } else if (e.shiftKey) {
+      if (e.shiftKey) {
         // Shift = Small Step (NEW FEATURE)
         this.controller.seek(0.05 * dir);
       } else {

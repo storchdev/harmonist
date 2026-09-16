@@ -11,7 +11,7 @@
         ["← / h", "Seek backward"],
         ["→ / l", "Seek forward"],
         ["Shift + ← / →", "Seek by small step"],
-        ["Ctrl + ← / →", "Jump to previous / next region boundary"],
+        ["[ / ]", "Jump to previous / next region boundary"],
       ],
     },
     {
@@ -26,14 +26,23 @@
     {
       title: "Selected region",
       rows: [
-        ["← / →", "Move region"],
+        ["← / h · → / l", "Move region"],
         ["Shift + ← / →", "Resize region"],
-        ["Ctrl + ← / →", "Select neighboring region"],
       ],
     },
     {
       title: "Timeline",
-      rows: [["Scroll", "Zoom in / out"]],
+      rows: [
+        ["Scroll", "Zoom in / out"],
+        ["+ / -", "Zoom in / out"],
+      ],
+    },
+    {
+      title: "Vim motions",
+      rows: [
+        ["h", "Same as ←"],
+        ["l", "Same as →"],
+      ],
     },
     {
       title: "History",
