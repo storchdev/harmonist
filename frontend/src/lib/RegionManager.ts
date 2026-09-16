@@ -4,7 +4,7 @@ import type { ChordRegion } from "../types";
 
 const MIN_DURATION = 0.1;
 const COLOR_DEFAULT = "color-mix(in srgb, var(--accent) 16%, transparent)";
-const COLOR_SELECTED = "color-mix(in srgb, var(--accent) 34%, transparent)";
+const COLOR_SELECTED = "color-mix(in srgb, var(--secondary) 34%, transparent)";
 
 type RegionLabelData = {
   chordSymbol: string;
@@ -52,12 +52,13 @@ export class RegionManager {
     left: "50%",
     top: "calc(100% + 0.4rem)",
     transform: "translateX(-50%)",
-    border: "1px solid rgba(255, 255, 255, 0.2)",
-    borderRadius: "999px",
-    background: "var(--accent-strong)",
-    color: "#fff",
-    fontSize: "0.78rem",
-    fontWeight: "700",
+    border: "1.5px solid var(--secondary)",
+    borderRadius: "6px",
+    background: "var(--bg-elevated)",
+    color: "var(--text)",
+    fontSize: "0.76rem",
+    fontWeight: "600",
+    fontStyle: "italic",
     lineHeight: "1.2",
     letterSpacing: "0.01em",
     padding: "0.15rem 0.5rem",
@@ -66,7 +67,7 @@ export class RegionManager {
     wordBreak: "break-word",
     width: "max-content",
     maxWidth: "220px",
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.25)",
   };
 
   private createLabelElement(data: RegionLabelData) {

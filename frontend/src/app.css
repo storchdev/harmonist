@@ -978,9 +978,9 @@ select {
 }
 
 .harmonist-region.region-selected {
-  border-left-color: var(--accent-strong) !important;
-  border-right-color: var(--accent-strong) !important;
-  box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--accent) 6%, transparent);
+  border-left-color: var(--secondary) !important;
+  border-right-color: var(--secondary) !important;
+  box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--secondary) 8%, transparent);
 }
 
 .region-label-chip {
