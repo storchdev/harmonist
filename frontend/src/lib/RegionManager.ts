@@ -3,8 +3,8 @@ import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import type { ChordRegion } from "../types";
 
 const MIN_DURATION = 0.1;
-const COLOR_DEFAULT = "rgba(59, 130, 246, 0.2)";
-const COLOR_SELECTED = "rgba(239, 68, 68, 0.4)";
+const COLOR_DEFAULT = "rgba(99, 102, 241, 0.16)";
+const COLOR_SELECTED = "rgba(99, 102, 241, 0.34)";
 
 type RegionLabelData = {
   chordSymbol: string;
@@ -30,39 +30,40 @@ export class RegionManager {
   };
 
   private readonly mainLabelStyle: Partial<CSSStyleDeclaration> = {
-    border: "1px solid rgba(90, 66, 39, 0.38)",
+    border: "1px solid rgba(255, 255, 255, 0.25)",
     borderRadius: "999px",
-    background: "rgba(255, 248, 235, 0.96)",
-    color: "#3f3023",
-    padding: "0.16rem 0.5rem",
+    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    color: "#fff",
+    padding: "0.2rem 0.65rem",
     fontSize: "0.9rem",
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: "0.01em",
-    lineHeight: "1.1",
-    boxShadow: "0 2px 8px rgba(62, 43, 24, 0.2)",
+    lineHeight: "1.15",
+    boxShadow: "0 3px 10px rgba(79, 70, 229, 0.45)",
     whiteSpace: "nowrap",
   };
 
   private readonly commentLabelStyle: Partial<CSSStyleDeclaration> = {
     position: "absolute",
     left: "50%",
-    top: "calc(100% + 0.48rem)",
+    top: "calc(100% + 0.4rem)",
     transform: "translateX(-50%)",
-    border: "1px solid rgba(49, 67, 94, 0.32)",
-    borderRadius: "0.45rem",
-    background: "rgba(216, 228, 246, 0.95)",
-    color: "#213855",
-    fontSize: "0.9rem",
-    fontWeight: "600",
+    border: "1px solid rgba(99, 102, 241, 0.35)",
+    borderRadius: "999px",
+    background: "rgba(99, 102, 241, 0.14)",
+    color: "#4338ca",
+    fontSize: "0.78rem",
+    fontWeight: "700",
     lineHeight: "1.2",
     letterSpacing: "0.01em",
-    padding: "0.14rem 0.38rem",
+    padding: "0.1rem 0.45rem",
     textAlign: "center",
     whiteSpace: "normal",
     wordBreak: "break-word",
     width: "max-content",
     maxWidth: "220px",
+    backdropFilter: "blur(2px)",
   };
 
   private createLabelElement(data: RegionLabelData) {
@@ -131,6 +132,10 @@ export class RegionManager {
   private styleRegionElement(region: any, labelData?: RegionLabelData) {
     if (region.element) {
       region.element.classList.add("harmonist-region");
+      region.element.classList.toggle(
+        "region-selected",
+        region.id === this.selectedRegionId,
+      );
       region.element.style.position = "absolute";
       region.element.style.overflow = "visible";
     }
@@ -317,11 +322,10 @@ export class RegionManager {
 
   public select(id: string | null) {
     this.selectedRegionId = id;
-    this.wsRegions
-      .getRegions()
-      .forEach((r) =>
-        r.setOptions({ color: r.id === id ? COLOR_SELECTED : COLOR_DEFAULT }),
-      );
+    this.wsRegions.getRegions().forEach((r) => {
+      r.setOptions({ color: r.id === id ? COLOR_SELECTED : COLOR_DEFAULT });
+      r.element?.classList.toggle("region-selected", r.id === id);
+    });
   }
 
   public get(id: string) {

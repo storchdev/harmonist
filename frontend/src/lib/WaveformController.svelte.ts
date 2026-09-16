@@ -48,8 +48,8 @@ export class WaveformController {
     this.ws = WaveSurfer.create({
       container,
       backend: "WebAudio",
-      waveColor: "#4b5563",
-      progressColor: "#3b82f6",
+      waveColor: "#a5b4fc",
+      progressColor: "#6366f1",
       height: 128,
       normalize: true,
       minPxPerSec: 50,
@@ -222,6 +222,31 @@ export class WaveformController {
       Math.min(this.duration, this.currentTime + amount),
     );
     this.ws.setTime(target);
+  }
+
+  selectNeighborRegion(direction: number) {
+    this.regions.selectNeighbor(direction);
+    this.scrollSelectedIntoView();
+  }
+
+  private scrollSelectedIntoView() {
+    const id = this.regions.selectedRegionId;
+    if (!id) return;
+    const r = this.regions.get(id);
+    if (!r) return;
+
+    const pxPerSec = this.zoomLevel;
+    const startPx = r.start * pxPerSec;
+    const endPx = r.end * pxPerSec;
+    const viewport = this.ws.getWidth();
+    const currentScroll = this.ws.getScroll();
+    const margin = Math.min(60, viewport / 4);
+
+    if (startPx < currentScroll + margin) {
+      this.ws.setScroll(Math.max(0, startPx - margin));
+    } else if (endPx > currentScroll + viewport - margin) {
+      this.ws.setScroll(endPx - viewport + margin);
+    }
   }
 
   seekToBoundary(direction: number) {

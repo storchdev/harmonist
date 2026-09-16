@@ -313,7 +313,7 @@
     <section class="panel panel-muted toolbar">
       <div class="toolbar-group">
         <button
-          class="btn btn-secondary btn-icon"
+          class="btn btn-play btn-icon"
           onclick={() => waveformRef?.playPause()}
           title="Play / pause"
         >

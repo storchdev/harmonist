@@ -44,7 +44,7 @@ export class InputManager {
 
     if (e.key === "Tab") {
       e.preventDefault();
-      this.controller.regions.selectNeighbor(e.shiftKey ? -1 : 1);
+      this.controller.selectNeighborRegion(e.shiftKey ? -1 : 1);
       return;
     }
 
@@ -72,7 +72,7 @@ export class InputManager {
         const dir = isLeft ? -1 : 1;
 
         if (e.ctrlKey) {
-          this.controller.regions.selectNeighbor(dir);
+          this.controller.selectNeighborRegion(dir);
         } else if (e.shiftKey) {
           // Shift in Region Mode = Resize
           this.controller.regions.nudgeSelected(dir, "resize");

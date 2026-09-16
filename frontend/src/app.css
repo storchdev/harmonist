@@ -403,6 +403,17 @@ select {
   background: rgba(220, 38, 38, 0.18);
 }
 
+.btn-play {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.btn-play:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
 .btn-ai {
   border-color: transparent;
   background: var(--amber-soft);
@@ -626,6 +637,65 @@ select {
 .range-control {
   width: 100%;
   accent-color: var(--accent);
+  appearance: none;
+  height: 1.05rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range-control::-webkit-slider-runnable-track {
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+}
+
+.range-control::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  border: 2px solid var(--bg-elevated);
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  margin-top: -0.24rem;
+  cursor: grab;
+}
+
+.range-control:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.range-control::-moz-range-track {
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+}
+
+.range-control::-moz-range-thumb {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  border: 2px solid var(--bg-elevated);
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+}
+
+.range-control:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.volume-synth .range-control::-webkit-slider-thumb,
+.volume-synth .range-control::-moz-range-thumb {
+  background: var(--amber);
+}
+
+.volume-track .range-control::-webkit-slider-thumb,
+.volume-track .range-control::-moz-range-thumb {
+  background: var(--accent);
 }
 
 .waveform-controls {
@@ -646,54 +716,6 @@ select {
 
 .timeline-scroll-control {
   flex: 1;
-  height: 1.05rem;
-  appearance: none;
-  background: transparent;
-}
-
-.timeline-scroll-control:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.timeline-scroll-control::-webkit-slider-runnable-track {
-  height: 0.4rem;
-  border-radius: 999px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-}
-
-.timeline-scroll-control::-webkit-slider-thumb {
-  appearance: none;
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 999px;
-  border: 2px solid var(--bg-elevated);
-  background: var(--accent);
-  box-shadow: var(--shadow-sm);
-  margin-top: -0.24rem;
-  cursor: grab;
-}
-
-.timeline-scroll-control:active::-webkit-slider-thumb {
-  cursor: grabbing;
-}
-
-.timeline-scroll-control::-moz-range-track {
-  height: 0.4rem;
-  border-radius: 999px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-}
-
-.timeline-scroll-control::-moz-range-thumb {
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 999px;
-  border: 2px solid var(--bg-elevated);
-  background: var(--accent);
-  box-shadow: var(--shadow-sm);
-  cursor: grab;
 }
 
 .control-row-zoom {
@@ -898,6 +920,16 @@ select {
 .harmonist-region {
   position: relative;
   overflow: visible !important;
+  border-left: 2px solid rgba(99, 102, 241, 0.55) !important;
+  border-right: 2px solid rgba(99, 102, 241, 0.55) !important;
+  border-radius: 4px;
+  transition: box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.harmonist-region.region-selected {
+  border-left-color: var(--accent-strong) !important;
+  border-right-color: var(--accent-strong) !important;
+  box-shadow: inset 0 0 0 9999px rgba(99, 102, 241, 0.06);
 }
 
 .region-label-chip {
