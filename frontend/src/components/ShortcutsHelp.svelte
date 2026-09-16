@@ -31,6 +31,14 @@
       ],
     },
     {
+      title: "Notes",
+      rows: [
+        ["N", "Add note at playhead"],
+        ["E / Enter", "Edit selected note"],
+        ["Delete / Backspace", "Delete selected note"],
+      ],
+    },
+    {
       title: "Timeline",
       rows: [
         ["Scroll", "Zoom in / out"],

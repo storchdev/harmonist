@@ -1,5 +1,10 @@
 import { Api } from "./api";
-import type { ProjectData, RegionChangeEvent } from "../types";
+import type { ProjectData, RegionChangeEvent, TimelineNote } from "../types";
+
+function withDefaults(data: ProjectData): ProjectData {
+  if (!Array.isArray(data.notes)) data.notes = [];
+  return data;
+}
 
 export class ProjectStore {
   private readonly lastProjectKey = "harmonist:last-project-id";
@@ -12,13 +17,13 @@ export class ProjectStore {
   canUndo = $derived(this.history.length > 0);
 
   async load(id: string) {
-    this.current = await Api.projects.get(id);
+    this.current = withDefaults(await Api.projects.get(id));
     this.history = [];
     localStorage.setItem(this.lastProjectKey, id);
   }
 
   async create() {
-    this.current = await Api.projects.create("New Analysis");
+    this.current = withDefaults(await Api.projects.create("New Analysis"));
     this.history = [];
     localStorage.setItem(this.lastProjectKey, this.current.id);
   }
@@ -84,7 +89,7 @@ export class ProjectStore {
       }
 
       // Load into state immediately
-      this.current = data;
+      this.current = withDefaults(data);
 
       // Optional: Auto-save to persist this imported project to backend immediately?
       // For now, we just load it into memory. User must click "Save" to persist.
@@ -138,6 +143,25 @@ export class ProjectStore {
 
       this.current.regions.sort((a, b) => a.start - b.start);
     }
+  }
+
+  addNote(time: number, text: string) {
+    if (!this.current) return;
+    const note: TimelineNote = { id: crypto.randomUUID(), time, text };
+    this.current.notes.push(note);
+    this.current.notes.sort((a, b) => a.time - b.time);
+    return note;
+  }
+
+  updateNote(id: string, text: string) {
+    if (!this.current) return;
+    const note = this.current.notes.find((n) => n.id === id);
+    if (note) note.text = text;
+  }
+
+  deleteNote(id: string) {
+    if (!this.current) return;
+    this.current.notes = this.current.notes.filter((n) => n.id !== id);
   }
 }
 

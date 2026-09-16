@@ -1,8 +1,9 @@
 import WaveSurfer from "wavesurfer.js";
 import { ChordPlayer } from "./ChordPlayer";
 import { RegionManager } from "./RegionManager";
+import { NoteManager } from "./NoteManager";
 import { InputManager } from "./InputManager";
-import type { ChordRegion } from "../types";
+import type { ChordRegion, TimelineNote } from "../types";
 
 export type WaveformScrollState = {
   position: number;
@@ -16,6 +17,7 @@ export class WaveformController {
 
   // Sub-Modules
   public regions: RegionManager;
+  public notes: NoteManager;
   public input: InputManager;
 
   // State
@@ -25,9 +27,11 @@ export class WaveformController {
   duration = $state(0);
 
   private regionsCache: ChordRegion[] = [];
+  private notesCache: TimelineNote[] = [];
   private lastTime = 0;
   private onUserInteraction: () => void;
   private onEditRegion: (id: string) => void;
+  private onEditNote: (id: string) => void;
   private zoomLevel = 50;
   private trackVolume = 1;
   private trackMuted = false;
@@ -39,10 +43,14 @@ export class WaveformController {
       onUserInteraction: () => void;
       onShowContextMenu: (e: MouseEvent, id: string) => void;
       onEditRegion: (id: string) => void;
+      onNoteChange: (event: any) => void;
+      onEditNote: (id: string) => void;
+      onShowNoteContextMenu: (e: MouseEvent, id: string) => void;
     },
   ) {
     this.onUserInteraction = callbacks.onUserInteraction;
     this.onEditRegion = callbacks.onEditRegion;
+    this.onEditNote = callbacks.onEditNote;
     this.player = new ChordPlayer();
 
     const styles = getComputedStyle(document.documentElement);
@@ -60,12 +68,20 @@ export class WaveformController {
     });
 
     this.regions = new RegionManager(this.ws, callbacks);
+    this.notes = new NoteManager(this.ws, {
+      onNoteChange: callbacks.onNoteChange,
+      onEditNote: callbacks.onEditNote,
+      onShowContextMenu: callbacks.onShowNoteContextMenu,
+    });
     this.input = new InputManager(this, container);
 
     this.setupAudioEvents();
 
     // Deselect on blank click
-    this.ws.on("click", () => this.regions.select(null));
+    this.ws.on("click", () => {
+      this.regions.select(null);
+      this.notes.select(null);
+    });
   }
 
   private setupAudioEvents() {
@@ -196,6 +212,39 @@ export class WaveformController {
   editSelected() {
     if (this.regions.selectedRegionId) {
       this.onEditRegion(this.regions.selectedRegionId);
+    }
+  }
+
+  syncNotes(data: TimelineNote[]) {
+    this.notesCache = data;
+    if (this.isReady) this.notes.sync(data);
+  }
+
+  addNoteAtCurrentTime(text: string) {
+    if (this.isReady) this.notes.add(this.ws.getCurrentTime(), text);
+  }
+
+  updateNoteContent(id: string, text: string) {
+    this.notes.updateContent(id, text);
+  }
+
+  deleteNote(id: string) {
+    this.notes.delete(id);
+  }
+
+  deleteSelectedNote() {
+    if (this.notes.selectedNoteId) {
+      this.notes.delete(this.notes.selectedNoteId);
+    }
+  }
+
+  hasSelectedNote() {
+    return this.notes.selectedNoteId !== null;
+  }
+
+  editSelectedNote() {
+    if (this.notes.selectedNoteId) {
+      this.onEditNote(this.notes.selectedNoteId);
     }
   }
 

@@ -132,6 +132,7 @@ def create_project():
         "name": data.get("name", "New Analysis"),
         "audio_file": None,  # Filename in AUDIO_DIR
         "regions": [],  # format: {id, start, end, chord_symbol, octave?, comment?}
+        "notes": [],  # format: {id, time, text} -- point-in-time annotations
         "bpm": 120,
     }
 

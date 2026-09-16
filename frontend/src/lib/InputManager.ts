@@ -63,6 +63,13 @@ export class InputManager {
       return;
     }
 
+    if (!e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "n") {
+      e.preventDefault();
+      this.controller.addNoteAtCurrentTime("");
+      this.controller.editSelectedNote();
+      return;
+    }
+
     if (
       !e.ctrlKey &&
       !e.metaKey &&
@@ -71,6 +78,23 @@ export class InputManager {
     ) {
       e.preventDefault();
       this.controller.editSelected();
+      return;
+    }
+
+    if (
+      !e.ctrlKey &&
+      !e.metaKey &&
+      (e.key === "Enter" || e.key.toLowerCase() === "e") &&
+      this.controller.hasSelectedNote()
+    ) {
+      e.preventDefault();
+      this.controller.editSelectedNote();
+      return;
+    }
+
+    if (isDelete && this.controller.hasSelectedNote()) {
+      e.preventDefault();
+      this.controller.deleteSelectedNote();
       return;
     }
 

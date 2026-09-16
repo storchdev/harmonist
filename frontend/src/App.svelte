@@ -32,6 +32,7 @@
     Keyboard,
     Undo2,
     Palette,
+    StickyNote,
   } from "@lucide/svelte";
 
   const oscillatorLabels: Record<string, string> = {
@@ -556,6 +557,17 @@
         audioUrl={projectStore.audioUrl || ""}
         regionsData={projectStore.current.regions}
         onRegionChange={(e) => projectStore.updateRegion(e)}
+        notesData={projectStore.current.notes}
+        onNoteChange={(e) => {
+          if ("action" in e && e.action === "delete") {
+            projectStore.deleteNote(e.id);
+          } else if (projectStore.current?.notes.some((n) => n.id === e.id)) {
+            projectStore.updateNote(e.id, e.text);
+          } else {
+            projectStore.current!.notes.push({ id: e.id, time: e.time, text: e.text });
+            projectStore.current!.notes.sort((a, b) => a.time - b.time);
+          }
+        }}
       />
     </section>
 
@@ -578,6 +590,13 @@
           onclick={() => waveformRef?.addRegionAtCurrentTime("C")}
         >
           <Plus size={16} /> Add Chord
+        </button>
+
+        <button
+          class="btn btn-outline"
+          onclick={() => waveformRef?.addNoteAtCurrentTime()}
+        >
+          <StickyNote size={16} /> Add Note
         </button>
 
         <button class="btn btn-ai" onclick={triggerAi} title="Identify chord">

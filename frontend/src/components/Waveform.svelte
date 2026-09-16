@@ -2,16 +2,19 @@
   import { onMount } from "svelte";
   import { WaveformController } from "../lib/WaveformController.svelte";
   import { Api } from "../lib/api";
-  import type { ChordRegion } from "../types";
+  import type { ChordRegion, TimelineNote } from "../types";
   import { Chord } from "@tonaljs/tonal";
   import { parseChordInput } from "../lib/chordParsing";
-  import { X, Pencil, Trash2, Sparkles } from "@lucide/svelte";
+  import { X, Pencil, Trash2, Sparkles, StickyNote } from "@lucide/svelte";
 
-  let { audioUrl, regionsData, onRegionChange } = $props<{
-    audioUrl: string;
-    regionsData: ChordRegion[];
-    onRegionChange: (e: any) => void;
-  }>();
+  let { audioUrl, regionsData, onRegionChange, notesData, onNoteChange } =
+    $props<{
+      audioUrl: string;
+      regionsData: ChordRegion[];
+      onRegionChange: (e: any) => void;
+      notesData: TimelineNote[];
+      onNoteChange: (e: any) => void;
+    }>();
 
   let container = $state<HTMLElement>();
   let panelEl = $state<HTMLElement>();
@@ -26,6 +29,10 @@
     comment: string;
   } | null>(null);
   let contextMenu = $state<{ x: number; y: number; regionId: string } | null>(
+    null,
+  );
+  let noteEditState = $state<{ id: string; text: string } | null>(null);
+  let noteContextMenu = $state<{ x: number; y: number; noteId: string } | null>(
     null,
   );
   let currentZoom = $state(50);
@@ -44,6 +51,7 @@
       onUserInteraction: () => {
         aiResult = null;
         contextMenu = null;
+        noteContextMenu = null;
       },
       onShowContextMenu: (e, id) => {
         const panelRect = panelEl?.getBoundingClientRect();
@@ -59,6 +67,21 @@
         };
       },
       onEditRegion: (id) => startEditing(id),
+      onNoteChange: (e) => onNoteChange(e),
+      onEditNote: (id) => startEditingNote(id),
+      onShowNoteContextMenu: (e, id) => {
+        const panelRect = panelEl?.getBoundingClientRect();
+        if (!panelRect) {
+          noteContextMenu = { x: e.clientX, y: e.clientY, noteId: id };
+          return;
+        }
+
+        noteContextMenu = {
+          x: e.clientX - panelRect.left,
+          y: e.clientY - panelRect.top,
+          noteId: id,
+        };
+      },
     });
 
     const unsubscribeScroll = controller.onScrollStateChange((state) => {
@@ -80,11 +103,19 @@
     if (controller && controller.isReady && regionsData)
       controller.syncRegions(regionsData);
   });
+  $effect(() => {
+    if (controller && controller.isReady && notesData)
+      controller.syncNotes(notesData);
+  });
 
   // Public Actions
   export const playPause = () => controller?.playPause();
   export const isPlaying = () => controller?.isPlaying ?? false;
   export const addRegionAtCurrentTime = (c: string) => controller?.addRegion(c);
+  export const addNoteAtCurrentTime = () => {
+    controller?.addNoteAtCurrentTime("");
+    controller?.editSelectedNote();
+  };
   export const setSynthVolume = (v: number) => controller?.setSynthVolume(v);
   export const setTrackVolume = (v: number) => controller?.setTrackVolume(v);
   export const setSynthMuted = (muted: boolean) => controller?.setSynthMuted(muted);
@@ -110,6 +141,10 @@
   function handleKeyDown(e: KeyboardEvent) {
     if (editState) {
       if (e.key === "Enter") saveEdit(); // Quick save
+      return;
+    }
+    if (noteEditState) {
+      if (e.key === "Enter") saveNoteEdit();
       return;
     }
     controller?.handleShortcut(e);
@@ -158,6 +193,31 @@
   function closeEditor() {
     editState = null;
     isInvalid = false;
+  }
+
+  function startEditingNote(id: string) {
+    const n = notesData.find((note: TimelineNote) => note.id === id);
+    if (!n) return;
+    noteEditState = { id, text: n.text };
+    contextMenu = null;
+    noteContextMenu = null;
+  }
+
+  function saveNoteEdit() {
+    if (!noteEditState || !controller) return;
+    controller.updateNoteContent(noteEditState.id, noteEditState.text.trim());
+    noteEditState = null;
+  }
+
+  function closeNoteEditor() {
+    noteEditState = null;
+  }
+
+  function handleDeleteNoteContext() {
+    if (noteContextMenu && controller) {
+      controller.deleteNote(noteContextMenu.noteId);
+      noteContextMenu = null;
+    }
   }
 
   function formatTime(t: number) {
@@ -295,6 +355,64 @@
         <button class="btn btn-primary" onclick={saveEdit}>Save</button>
       </div>
     </div>
+  {/if}
+
+  {#if noteEditState}
+    <button
+      type="button"
+      class="modal-backdrop"
+      onclick={closeNoteEditor}
+      aria-label="Close note editor"
+    ></button>
+    <div class="modal-card compact">
+      <div class="modal-header">
+        <h3 class="modal-title"><StickyNote size={16} /> Edit Note</h3>
+        <button class="close-ghost" onclick={closeNoteEditor}><X size={16} /></button>
+      </div>
+
+      <div class="field-group">
+        <label class="micro-label" for="edit-note-text">Note Text</label>
+        <input
+          id="edit-note-text"
+          bind:value={noteEditState.text}
+          class="input-field"
+          placeholder="Enter a note"
+        />
+      </div>
+
+      <div
+        style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;"
+      >
+        <button class="btn btn-outline" onclick={closeNoteEditor}>Cancel</button>
+        <button class="btn btn-primary" onclick={saveNoteEdit}>Save</button>
+      </div>
+    </div>
+  {/if}
+
+  {#if noteContextMenu}
+    <div
+      class="context-menu"
+      style="top: {noteContextMenu.y}px; left: {noteContextMenu.x}px"
+    >
+      <button
+        class="context-item"
+        onclick={() => startEditingNote(noteContextMenu!.noteId)}
+        ><Pencil size={14} /> Edit Note</button
+      >
+      <button class="context-item danger" onclick={handleDeleteNoteContext}
+        ><Trash2 size={14} /> Delete</button
+      >
+    </div>
+    <button
+      type="button"
+      class="fixed inset-0 z-[99]"
+      aria-label="Close context menu"
+      onclick={() => (noteContextMenu = null)}
+      oncontextmenu={(e) => {
+        e.preventDefault();
+        noteContextMenu = null;
+      }}
+    ></button>
   {/if}
 
   {#if contextMenu}
