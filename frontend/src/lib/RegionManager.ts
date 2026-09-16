@@ -54,7 +54,8 @@ export class RegionManager {
     transform: "translateX(-50%)",
     border: "2px solid rgba(255, 255, 255, 0.18)",
     borderRadius: "999px",
-    background: "color-mix(in srgb, black 55%, var(--secondary) 18%)",
+    background:
+      "color-mix(in srgb, color-mix(in srgb, black 55%, var(--secondary) 18%) 62%, transparent)",
     backdropFilter: "blur(6px)",
     color: "#fff",
     textShadow: "0 1px 2px rgba(0, 0, 0, 0.55)",
