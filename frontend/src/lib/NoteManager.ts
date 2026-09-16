@@ -13,8 +13,8 @@ export class NoteManager {
   private readonly labelStyle: Partial<CSSStyleDeclaration> = {
     position: "absolute",
     left: "0",
-    top: "0",
-    transform: "translate(-2px, -100%)",
+    top: "4px",
+    transform: "translate(-50%, 0)",
     display: "flex",
     alignItems: "center",
     gap: "0.3rem",
