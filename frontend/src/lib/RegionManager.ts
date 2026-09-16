@@ -15,6 +15,7 @@ export class RegionManager {
   private wsRegions: RegionsPlugin;
   public selectedRegionId: string | null = null;
   private onRegionChange: (event: any) => void;
+  private playheadTime = 0;
 
   private readonly labelStyle: Partial<CSSStyleDeclaration> = {
     position: "absolute",
@@ -51,21 +52,21 @@ export class RegionManager {
     left: "50%",
     top: "calc(100% + 0.4rem)",
     transform: "translateX(-50%)",
-    border: "1px solid color-mix(in srgb, var(--accent) 35%, transparent)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
     borderRadius: "999px",
-    background: "color-mix(in srgb, var(--accent) 14%, transparent)",
-    color: "var(--accent-strong)",
+    background: "var(--accent-strong)",
+    color: "#fff",
     fontSize: "0.78rem",
     fontWeight: "700",
     lineHeight: "1.2",
     letterSpacing: "0.01em",
-    padding: "0.1rem 0.45rem",
+    padding: "0.15rem 0.5rem",
     textAlign: "center",
     whiteSpace: "normal",
     wordBreak: "break-word",
     width: "max-content",
     maxWidth: "220px",
-    backdropFilter: "blur(2px)",
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.35)",
   };
 
   private createLabelElement(data: RegionLabelData) {
@@ -131,6 +132,25 @@ export class RegionManager {
     return { chordSymbol: "" };
   }
 
+  private isOverPlayhead(region: any): boolean {
+    return this.playheadTime >= region.start && this.playheadTime < region.end;
+  }
+
+  private isRaised(region: any): boolean {
+    return region.id === this.selectedRegionId || this.isOverPlayhead(region);
+  }
+
+  private applyZIndex(region: any) {
+    const raised = this.isRaised(region);
+    if (region.element) {
+      region.element.style.zIndex = raised ? "5" : "1";
+    }
+    const contentEl = (region as any).content;
+    if (contentEl instanceof HTMLElement) {
+      contentEl.style.zIndex = raised ? "10" : "2";
+    }
+  }
+
   private styleRegionElement(region: any, labelData?: RegionLabelData) {
     const isSelected = region.id === this.selectedRegionId;
 
@@ -139,7 +159,6 @@ export class RegionManager {
       region.element.classList.toggle("region-selected", isSelected);
       region.element.style.position = "absolute";
       region.element.style.overflow = "visible";
-      region.element.style.zIndex = isSelected ? "5" : "1";
     }
 
     const contentEl = (region as any).content;
@@ -147,8 +166,9 @@ export class RegionManager {
       contentEl.classList.add("region-label-chip");
       if (labelData) this.setLabelElementText(contentEl, labelData);
       Object.assign(contentEl.style, this.labelStyle);
-      contentEl.style.zIndex = isSelected ? "10" : "2";
     }
+
+    this.applyZIndex(region);
 
     if (labelData) {
       this.setRegionLabelData(region, labelData);
@@ -330,13 +350,15 @@ export class RegionManager {
       r.setOptions({ color: isSelected ? COLOR_SELECTED : COLOR_DEFAULT });
       if (r.element) {
         r.element.classList.toggle("region-selected", isSelected);
-        r.element.style.zIndex = isSelected ? "5" : "1";
       }
-      const contentEl = (r as any).content;
-      if (contentEl instanceof HTMLElement) {
-        contentEl.style.zIndex = isSelected ? "10" : "2";
-      }
+      this.applyZIndex(r);
     });
+  }
+
+  public setPlayheadTime(time: number) {
+    if (this.playheadTime === time) return;
+    this.playheadTime = time;
+    this.wsRegions.getRegions().forEach((r) => this.applyZIndex(r));
   }
 
   public get(id: string) {

@@ -115,9 +115,13 @@ export class WaveformController {
       this.currentTime = t;
       this.player.stopAll();
       this.onUserInteraction();
+      this.regions.setPlayheadTime(t);
     });
 
-    this.ws.on("timeupdate", (t) => (this.currentTime = t));
+    this.ws.on("timeupdate", (t) => {
+      this.currentTime = t;
+      this.regions.setPlayheadTime(t);
+    });
 
     this.ws.on("audioprocess", (t) => {
       if (!this.ws.isPlaying()) return;
