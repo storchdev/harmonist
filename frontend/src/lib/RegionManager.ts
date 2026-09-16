@@ -130,14 +130,14 @@ export class RegionManager {
   }
 
   private styleRegionElement(region: any, labelData?: RegionLabelData) {
+    const isSelected = region.id === this.selectedRegionId;
+
     if (region.element) {
       region.element.classList.add("harmonist-region");
-      region.element.classList.toggle(
-        "region-selected",
-        region.id === this.selectedRegionId,
-      );
+      region.element.classList.toggle("region-selected", isSelected);
       region.element.style.position = "absolute";
       region.element.style.overflow = "visible";
+      region.element.style.zIndex = isSelected ? "5" : "1";
     }
 
     const contentEl = (region as any).content;
@@ -145,6 +145,7 @@ export class RegionManager {
       contentEl.classList.add("region-label-chip");
       if (labelData) this.setLabelElementText(contentEl, labelData);
       Object.assign(contentEl.style, this.labelStyle);
+      contentEl.style.zIndex = isSelected ? "10" : "2";
     }
 
     if (labelData) {
@@ -323,8 +324,16 @@ export class RegionManager {
   public select(id: string | null) {
     this.selectedRegionId = id;
     this.wsRegions.getRegions().forEach((r) => {
-      r.setOptions({ color: r.id === id ? COLOR_SELECTED : COLOR_DEFAULT });
-      r.element?.classList.toggle("region-selected", r.id === id);
+      const isSelected = r.id === id;
+      r.setOptions({ color: isSelected ? COLOR_SELECTED : COLOR_DEFAULT });
+      if (r.element) {
+        r.element.classList.toggle("region-selected", isSelected);
+        r.element.style.zIndex = isSelected ? "5" : "1";
+      }
+      const contentEl = (r as any).content;
+      if (contentEl instanceof HTMLElement) {
+        contentEl.style.zIndex = isSelected ? "10" : "2";
+      }
     });
   }
 
