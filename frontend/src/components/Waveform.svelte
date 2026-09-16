@@ -89,6 +89,7 @@
   export const setSynthMuted = (muted: boolean) => controller?.setSynthMuted(muted);
   export const setTrackMuted = (muted: boolean) => controller?.setTrackMuted(muted);
   export const setOscillator = (t: string) => controller?.setOscillator(t);
+  export const refreshThemeColors = () => controller?.refreshThemeColors();
 
   export async function askAiForChord(settings: any) {
     if (!audioUrl || !controller) return;
@@ -210,7 +211,7 @@
         class="reveal flex flex-col items-center"
         style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 16px; padding: 0.75rem 1.5rem; box-shadow: var(--shadow-lg); color: var(--text)"
       >
-        <span class="micro-label" style="color: var(--amber)"
+        <span class="micro-label" style="color: var(--secondary)"
           ><Sparkles size={12} /> AI Detected</span
         >
         <div class="text-2xl font-bold mt-1">

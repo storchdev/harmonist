@@ -3,8 +3,8 @@ import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import type { ChordRegion } from "../types";
 
 const MIN_DURATION = 0.1;
-const COLOR_DEFAULT = "rgba(99, 102, 241, 0.16)";
-const COLOR_SELECTED = "rgba(99, 102, 241, 0.34)";
+const COLOR_DEFAULT = "color-mix(in srgb, var(--accent) 16%, transparent)";
+const COLOR_SELECTED = "color-mix(in srgb, var(--accent) 34%, transparent)";
 
 type RegionLabelData = {
   chordSymbol: string;
@@ -32,7 +32,8 @@ export class RegionManager {
   private readonly mainLabelStyle: Partial<CSSStyleDeclaration> = {
     border: "1px solid rgba(255, 255, 255, 0.25)",
     borderRadius: "999px",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    background:
+      "linear-gradient(135deg, var(--accent), var(--accent-strong))",
     color: "#fff",
     padding: "0.2rem 0.65rem",
     fontSize: "0.9rem",
@@ -40,7 +41,8 @@ export class RegionManager {
     textAlign: "center",
     letterSpacing: "0.01em",
     lineHeight: "1.15",
-    boxShadow: "0 3px 10px rgba(79, 70, 229, 0.45)",
+    boxShadow:
+      "0 3px 10px color-mix(in srgb, var(--accent-strong) 45%, transparent)",
     whiteSpace: "nowrap",
   };
 
@@ -49,10 +51,10 @@ export class RegionManager {
     left: "50%",
     top: "calc(100% + 0.4rem)",
     transform: "translateX(-50%)",
-    border: "1px solid rgba(99, 102, 241, 0.35)",
+    border: "1px solid color-mix(in srgb, var(--accent) 35%, transparent)",
     borderRadius: "999px",
-    background: "rgba(99, 102, 241, 0.14)",
-    color: "#4338ca",
+    background: "color-mix(in srgb, var(--accent) 14%, transparent)",
+    color: "var(--accent-strong)",
     fontSize: "0.78rem",
     fontWeight: "700",
     lineHeight: "1.2",

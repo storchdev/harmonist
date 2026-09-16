@@ -5,6 +5,7 @@
   import Waveform from "./components/Waveform.svelte";
   import AiSettings from "./components/AiSettings.svelte";
   import ShortcutsHelp from "./components/ShortcutsHelp.svelte";
+  import * as catppuccin from "@catppuccin/palette";
   import {
     Music,
     FolderOpen,
@@ -70,29 +71,178 @@
   function toggleTheme() {
     theme = theme === "dark" ? "light" : "dark";
     applyTheme();
-    applyAccent(accentColor);
+    applyPalette();
   }
 
-  // --- Accent color ---
-  const accentPresets = [
-    "#6366f1", // indigo
-    "#3b82f6", // blue
-    "#0ea5e9", // sky
-    "#10b981", // emerald
-    "#f59e0b", // amber
-    "#f43f5e", // rose
-    "#ec4899", // pink
-    "#8b5cf6", // violet
+  // --- Color themes ---
+  // Catppuccin's flavors come straight from the official @catppuccin/palette
+  // package; Tokyo Night and Rosé Pine don't have a maintained raw-palette
+  // package (only editor-theme bundles), so their canonical published hex
+  // values are used directly instead.
+  type RawPalette = {
+    bg: string;
+    bgElevated: string;
+    bgInset: string;
+    border: string;
+    borderStrong: string;
+    text: string;
+    textMuted: string;
+    textFaint: string;
+    accent: string;
+    secondary: string;
+    amber: string;
+    success: string;
+    danger: string;
+  };
+
+  const mocha = catppuccin.flavors.mocha.colors;
+  const latte = catppuccin.flavors.latte.colors;
+
+  const themeFamilies: { id: string; label: string; light: RawPalette; dark: RawPalette }[] = [
+    {
+      id: "default",
+      label: "Default",
+      light: {
+        bg: "#f7f7f8",
+        bgElevated: "#ffffff",
+        bgInset: "#f0f0f2",
+        border: "#e4e4e8",
+        borderStrong: "#d4d4da",
+        text: "#17171a",
+        textMuted: "#6b6b76",
+        textFaint: "#9a9aa4",
+        accent: "#4f46e5",
+        secondary: "#0891b2",
+        amber: "#d97706",
+        success: "#16a34a",
+        danger: "#dc2626",
+      },
+      dark: {
+        bg: "#0d0d10",
+        bgElevated: "#17171b",
+        bgInset: "#1e1e23",
+        border: "#26262c",
+        borderStrong: "#34343c",
+        text: "#f2f2f4",
+        textMuted: "#9a9aa4",
+        textFaint: "#6b6b76",
+        accent: "#6366f1",
+        secondary: "#22d3ee",
+        amber: "#f59e0b",
+        success: "#22c55e",
+        danger: "#ef4444",
+      },
+    },
+    {
+      id: "tokyo-night",
+      label: "Tokyo Night",
+      light: {
+        bg: "#e1e2e7",
+        bgElevated: "#ffffff",
+        bgInset: "#dfe0e5",
+        border: "#c4c8da",
+        borderStrong: "#a8afc7",
+        text: "#343b58",
+        textMuted: "#565a6e",
+        textFaint: "#9699a3",
+        accent: "#2e7de9",
+        secondary: "#9854f1",
+        amber: "#8f5e15",
+        success: "#385f0d",
+        danger: "#8c4351",
+      },
+      dark: {
+        bg: "#1a1b26",
+        bgElevated: "#1f2335",
+        bgInset: "#24283b",
+        border: "#292e42",
+        borderStrong: "#3b4261",
+        text: "#c0caf5",
+        textMuted: "#9aa5ce",
+        textFaint: "#565f89",
+        accent: "#7aa2f7",
+        secondary: "#bb9af7",
+        amber: "#e0af68",
+        success: "#9ece6a",
+        danger: "#f7768e",
+      },
+    },
+    {
+      id: "catppuccin",
+      label: "Catppuccin",
+      light: {
+        bg: latte.mantle.hex,
+        bgElevated: latte.base.hex,
+        bgInset: latte.crust.hex,
+        border: latte.surface0.hex,
+        borderStrong: latte.surface1.hex,
+        text: latte.text.hex,
+        textMuted: latte.subtext0.hex,
+        textFaint: latte.overlay1.hex,
+        accent: latte.mauve.hex,
+        secondary: latte.blue.hex,
+        amber: latte.yellow.hex,
+        success: latte.green.hex,
+        danger: latte.red.hex,
+      },
+      dark: {
+        bg: mocha.mantle.hex,
+        bgElevated: mocha.base.hex,
+        bgInset: mocha.surface0.hex,
+        border: mocha.surface1.hex,
+        borderStrong: mocha.surface2.hex,
+        text: mocha.text.hex,
+        textMuted: mocha.subtext0.hex,
+        textFaint: mocha.overlay1.hex,
+        accent: mocha.mauve.hex,
+        secondary: mocha.blue.hex,
+        amber: mocha.yellow.hex,
+        success: mocha.green.hex,
+        danger: mocha.red.hex,
+      },
+    },
+    {
+      id: "rose-pine",
+      label: "Rosé Pine",
+      light: {
+        bg: "#faf4ed",
+        bgElevated: "#fffaf3",
+        bgInset: "#f2e9e1",
+        border: "#dfdad9",
+        borderStrong: "#cecacd",
+        text: "#575279",
+        textMuted: "#797593",
+        textFaint: "#9893a5",
+        accent: "#907aa9",
+        secondary: "#56949f",
+        amber: "#ea9d34",
+        success: "#286983",
+        danger: "#b4637a",
+      },
+      dark: {
+        bg: "#191724",
+        bgElevated: "#1f1d2e",
+        bgInset: "#26233a",
+        border: "#403d52",
+        borderStrong: "#524f67",
+        text: "#e0def4",
+        textMuted: "#908caa",
+        textFaint: "#6e6a86",
+        accent: "#c4a7e7",
+        secondary: "#9ccfd8",
+        amber: "#f6c177",
+        success: "#31748f",
+        danger: "#eb6f92",
+      },
+    },
   ];
 
-  let accentColor = $state(localStorage.getItem("accentColor") || "#6366f1");
+  let themeFamily = $state(localStorage.getItem("themeFamily") || "default");
   let showAccentMenu = $state(false);
 
   function hexToRgb(hex: string) {
     const h = hex.replace("#", "");
-    const full = h.length === 3
-      ? h.split("").map((c) => c + c).join("")
-      : h;
+    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
     const n = parseInt(full, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   }
@@ -110,23 +260,51 @@
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  function applyAccent(hex: string) {
+  function activeFamily() {
+    return themeFamilies.find((f) => f.id === themeFamily) ?? themeFamilies[0];
+  }
+
+  function applyPalette() {
+    const raw = activeFamily()[theme];
+    const strongDir = theme === "dark" ? 0.18 : -0.15;
+    const softAlpha = theme === "dark" ? 0.16 : 0.1;
+
     const root = document.documentElement.style;
-    root.setProperty("--accent", hex);
-    root.setProperty("--accent-strong", shade(hex, theme === "dark" ? 0.18 : -0.15));
-    root.setProperty("--accent-soft", withAlpha(hex, theme === "dark" ? 0.18 : 0.1));
-    root.setProperty("--focus-ring", withAlpha(hex, theme === "dark" ? 0.4 : 0.35));
+    root.setProperty("--bg", raw.bg);
+    root.setProperty("--bg-elevated", raw.bgElevated);
+    root.setProperty("--bg-inset", raw.bgInset);
+    root.setProperty("--border", raw.border);
+    root.setProperty("--border-strong", raw.borderStrong);
+    root.setProperty("--text", raw.text);
+    root.setProperty("--text-muted", raw.textMuted);
+    root.setProperty("--text-faint", raw.textFaint);
+    root.setProperty("--accent", raw.accent);
+    root.setProperty("--accent-strong", shade(raw.accent, strongDir));
+    root.setProperty("--accent-soft", withAlpha(raw.accent, softAlpha));
+    root.setProperty("--secondary", raw.secondary);
+    root.setProperty("--secondary-strong", shade(raw.secondary, strongDir));
+    root.setProperty("--secondary-soft", withAlpha(raw.secondary, softAlpha));
+    root.setProperty("--amber", raw.amber);
+    root.setProperty("--amber-soft", withAlpha(raw.amber, softAlpha));
+    root.setProperty("--success", raw.success);
+    root.setProperty("--success-soft", withAlpha(raw.success, softAlpha));
+    root.setProperty("--danger", raw.danger);
+    root.setProperty("--danger-soft", withAlpha(raw.danger, softAlpha));
+    root.setProperty("--focus-ring", withAlpha(raw.accent, theme === "dark" ? 0.4 : 0.35));
+    root.setProperty(
+      "--wave-color",
+      shade(raw.accent, theme === "dark" ? -0.45 : 0.5),
+    );
+    root.setProperty("--wave-progress-color", raw.accent);
+
+    waveformRef?.refreshThemeColors();
   }
 
-  function selectAccent(hex: string) {
-    accentColor = hex;
-    applyAccent(hex);
-    localStorage.setItem("accentColor", hex);
+  function selectThemeFamily(id: string) {
+    themeFamily = id;
+    localStorage.setItem("themeFamily", id);
+    applyPalette();
     showAccentMenu = false;
-  }
-
-  function handleCustomAccent(e: Event) {
-    selectAccent((e.currentTarget as HTMLInputElement).value);
   }
 
   async function toggleLoadMenu() {
@@ -229,7 +407,7 @@
 
   onMount(() => {
     applyTheme();
-    applyAccent(accentColor);
+    applyPalette();
     projectStore.restoreLastProject();
   });
 </script>
@@ -254,33 +432,28 @@
         <button
           class="theme-toggle"
           onclick={() => (showAccentMenu = !showAccentMenu)}
-          title="Accent color"
+          title="Theme"
         >
           <Palette size={16} />
         </button>
         {#if showAccentMenu}
           <div class="dropdown-menu accent-menu">
-            <div class="accent-swatches">
-              {#each accentPresets as hex}
-                <button
-                  class="accent-swatch"
-                  class:active={accentColor.toLowerCase() === hex}
-                  style="background:{hex}"
-                  title={hex}
-                  onclick={() => selectAccent(hex)}
-                >
-                  {#if accentColor.toLowerCase() === hex}<Check size={12} />{/if}
-                </button>
-              {/each}
-            </div>
-            <label class="accent-custom-row">
-              <span>Custom</span>
-              <input
-                type="color"
-                value={accentColor}
-                oninput={handleCustomAccent}
-              />
-            </label>
+            {#each themeFamilies as family}
+              <button
+                class="dropdown-item"
+                class:active={themeFamily === family.id}
+                onclick={() => selectThemeFamily(family.id)}
+              >
+                <span class="accent-swatch-row">
+                  <span
+                    class="accent-swatch"
+                    style="background:{family[theme].accent}"
+                  ></span>
+                  {family.label}
+                </span>
+                {#if themeFamily === family.id}<Check size={14} />{/if}
+              </button>
+            {/each}
           </div>
         {/if}
       </div>

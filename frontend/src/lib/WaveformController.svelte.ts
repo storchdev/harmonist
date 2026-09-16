@@ -45,11 +45,14 @@ export class WaveformController {
     this.onEditRegion = callbacks.onEditRegion;
     this.player = new ChordPlayer();
 
+    const styles = getComputedStyle(document.documentElement);
+
     this.ws = WaveSurfer.create({
       container,
       backend: "WebAudio",
-      waveColor: "#a5b4fc",
-      progressColor: "#6366f1",
+      waveColor: styles.getPropertyValue("--wave-color").trim() || "#a5b4fc",
+      progressColor:
+        styles.getPropertyValue("--wave-progress-color").trim() || "#6366f1",
       height: 128,
       normalize: true,
       minPxPerSec: 50,
@@ -270,6 +273,15 @@ export class WaveformController {
   setZoom(val: number) {
     this.zoomLevel = val;
     this.ws.zoom(val);
+  }
+
+  refreshThemeColors() {
+    const styles = getComputedStyle(document.documentElement);
+    const waveColor = styles.getPropertyValue("--wave-color").trim();
+    const progressColor = styles
+      .getPropertyValue("--wave-progress-color")
+      .trim();
+    this.ws.setOptions({ waveColor, progressColor });
   }
 
   getScrollState(): WaveformScrollState {

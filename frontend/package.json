@@ -19,6 +19,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@catppuccin/palette": "^1.8.0",
     "@lucide/svelte": "^1.46.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tonaljs/tonal": "^4.10.0",
