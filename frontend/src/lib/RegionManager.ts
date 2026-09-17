@@ -30,6 +30,10 @@ export class RegionManager {
   private dragSnapshot: Map<string, { start: number; end: number }> = new Map();
 
   private readonly labelStyle: Partial<CSSStyleDeclaration> = {
+    // Centered on the region via left/top 50% + a translate transform,
+    // sized to the chord chip alone (the comment below is positioned out
+    // of flow — see commentLabelStyle — so a long comment can never widen
+    // this box and drag the chord chip off-center with it).
     position: "absolute",
     left: "50%",
     top: "50%",
@@ -61,6 +65,9 @@ export class RegionManager {
   };
 
   private readonly commentLabelStyle: Partial<CSSStyleDeclaration> = {
+    // Positioned out of flow, centered independently on the chord chip's
+    // own box (not the other way around) — its width never affects the
+    // chord chip's centering. See labelStyle.
     position: "absolute",
     left: "50%",
     top: "calc(100% + 0.4rem)",
@@ -200,6 +207,13 @@ export class RegionManager {
     },
   ) {
     this.wsRegions = ws.registerPlugin(RegionsPlugin.create());
+    // WaveSurfer's RegionsPlugin has a built-in avoidOverlapping() that
+    // measures each region's content box against its neighbors and pushes
+    // overlapping labels down via a dynamically-set marginTop. We want
+    // labels always centered on their own region instead (overlap is
+    // fine), so disable it — it otherwise fights our centering on every
+    // region-created/update-end and produces visible drift.
+    (this.wsRegions as any).avoidOverlapping = () => {};
     this.onRegionChange = callbacks.onRegionChange;
 
     this.setupEvents(callbacks);

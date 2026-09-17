@@ -31,6 +31,7 @@ export class NoteManager {
     Object.assign(wrapper.style, {
       position: "absolute",
       top: "50%",
+      left: "50%",
       margin: "0",
       transform: "translate(-50%, -50%)",
       display: "flex",
@@ -71,6 +72,10 @@ export class NoteManager {
     },
   ) {
     this.wsNotes = ws.registerPlugin(RegionsPlugin.create());
+    // See RegionManager's constructor: disable WaveSurfer's built-in
+    // content-overlap avoidance, which otherwise shoves marker icons off
+    // center via a dynamically-set marginTop.
+    (this.wsNotes as any).avoidOverlapping = () => {};
     this.onNoteChange = callbacks.onNoteChange;
     const styles = getComputedStyle(document.documentElement);
     this.bgElevated =
