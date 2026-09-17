@@ -272,6 +272,12 @@ export class WaveformController {
   setDefaultChordLength(v: number) {
     this.regions.setDefaultDuration(v);
   }
+  copySelectedRegions() {
+    return this.regions.copySelected();
+  }
+  pasteRegionsAtPlayhead() {
+    this.regions.pasteAt(this.ws.getCurrentTime());
+  }
   setSynthVolume(v: number) {
     this.player.setVolume(v);
   }

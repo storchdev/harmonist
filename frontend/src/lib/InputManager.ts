@@ -51,6 +51,20 @@ export class InputManager {
       }
     }
 
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+      if (this.controller.hasSelectedRegion()) {
+        e.preventDefault();
+        this.controller.copySelectedRegions();
+      }
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
+      e.preventDefault();
+      this.controller.pasteRegionsAtPlayhead();
+      return;
+    }
+
     if (isSpace) {
       e.preventDefault();
       this.controller.playPause();

@@ -11,12 +11,24 @@ type RegionLabelData = {
   comment?: string;
 };
 
+type ClipboardEntry = {
+  offset: number;
+  duration: number;
+  chordSymbol: string;
+  comment?: string;
+};
+
 export class RegionManager {
   private wsRegions: RegionsPlugin;
   public selectedRegionId: string | null = null;
+  public selectedIds: Set<string> = new Set();
+  private clipboard: ClipboardEntry[] = [];
   private onRegionChange: (event: any) => void;
   private playheadTime = 0;
   private defaultDuration = 2.0;
+  private dragAnchorId: string | null = null;
+  private dragSnapshot: Map<string, { start: number; end: number }> =
+    new Map();
 
   private readonly labelStyle: Partial<CSSStyleDeclaration> = {
     position: "absolute",
@@ -144,7 +156,7 @@ export class RegionManager {
   }
 
   private isRaised(region: any): boolean {
-    return region.id === this.selectedRegionId || this.isOverPlayhead(region);
+    return this.selectedIds.has(region.id) || this.isOverPlayhead(region);
   }
 
   private applyZIndex(region: any) {
@@ -159,7 +171,7 @@ export class RegionManager {
   }
 
   private styleRegionElement(region: any, labelData?: RegionLabelData) {
-    const isSelected = region.id === this.selectedRegionId;
+    const isSelected = this.selectedIds.has(region.id);
 
     if (region.element) {
       region.element.classList.add("harmonist-region");
@@ -198,6 +210,21 @@ export class RegionManager {
 
   private setupEvents(cbs: any) {
     // 1. Updates & Collisions
+    this.wsRegions.on("region-update", (region, side) => {
+      // side is undefined for a move, "start"/"end" for a resize handle drag
+      if (side !== undefined) return;
+      if (this.dragAnchorId !== region.id) return;
+      const anchorSnap = this.dragSnapshot.get(region.id);
+      if (!anchorSnap) return;
+      const delta = region.start - anchorSnap.start;
+      this.dragSnapshot.forEach((snap, id) => {
+        if (id === region.id) return;
+        const r = this.get(id);
+        if (!r) return;
+        r.setOptions({ start: snap.start + delta, end: snap.end + delta });
+      });
+    });
+
     this.wsRegions.on("region-updated", (region) => {
       this.handleCollision(region);
       const labelData = this.getRegionLabelData(region);
@@ -208,12 +235,34 @@ export class RegionManager {
         content: labelData.chordSymbol,
         comment: labelData.comment,
       });
+
+      if (this.dragAnchorId === region.id && this.dragSnapshot.size > 1) {
+        this.dragSnapshot.forEach((_, id) => {
+          if (id === region.id) return;
+          const r = this.get(id);
+          if (!r) return;
+          const otherData = this.getRegionLabelData(r);
+          this.onRegionChange({
+            id: r.id,
+            start: r.start,
+            end: r.end,
+            content: otherData.chordSymbol,
+            comment: otherData.comment,
+          });
+        });
+      }
+      this.dragAnchorId = null;
+      this.dragSnapshot = new Map();
     });
 
     // 2. Selection
     this.wsRegions.on("region-clicked", (region, e) => {
       e.stopPropagation();
-      this.select(region.id);
+      if (e.ctrlKey || e.metaKey) {
+        this.toggleMultiSelect(region.id);
+      } else {
+        this.select(region.id);
+      }
     });
 
     // 3. Interactions
@@ -226,6 +275,18 @@ export class RegionManager {
       this.styleRegionElement(region);
 
       if (region.element) {
+        region.element.addEventListener("pointerdown", () => {
+          if (this.selectedIds.has(region.id) && this.selectedIds.size > 1) {
+            this.dragAnchorId = region.id;
+            this.dragSnapshot = new Map(
+              [...this.selectedIds].map((id) => {
+                const r = this.get(id);
+                return [id, { start: r?.start ?? 0, end: r?.end ?? 0 }];
+              }),
+            );
+          }
+        });
+
         region.element.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -260,8 +321,7 @@ export class RegionManager {
             chordSymbol: r.chord_symbol,
             comment: r.comment,
           }),
-          color:
-            r.id === this.selectedRegionId ? COLOR_SELECTED : COLOR_DEFAULT,
+          color: this.selectedIds.has(r.id) ? COLOR_SELECTED : COLOR_DEFAULT,
           drag: true,
           resize: true,
         });
@@ -352,14 +412,92 @@ export class RegionManager {
 
   public select(id: string | null) {
     this.selectedRegionId = id;
+    this.selectedIds = id ? new Set([id]) : new Set();
+    this.refreshSelectionStyles();
+  }
+
+  public toggleMultiSelect(id: string) {
+    if (this.selectedIds.has(id)) {
+      this.selectedIds.delete(id);
+      if (this.selectedRegionId === id) {
+        const remaining = [...this.selectedIds];
+        this.selectedRegionId = remaining[remaining.length - 1] ?? null;
+      }
+    } else {
+      this.selectedIds.add(id);
+      this.selectedRegionId = id;
+    }
+    this.refreshSelectionStyles();
+  }
+
+  private refreshSelectionStyles() {
     this.wsRegions.getRegions().forEach((r) => {
-      const isSelected = r.id === id;
+      const isSelected = this.selectedIds.has(r.id);
       r.setOptions({ color: isSelected ? COLOR_SELECTED : COLOR_DEFAULT });
       if (r.element) {
         r.element.classList.toggle("region-selected", isSelected);
       }
       this.applyZIndex(r);
     });
+  }
+
+  public copySelected(): boolean {
+    const selected = this.getAll().filter((r) => this.selectedIds.has(r.id));
+    if (selected.length === 0) return false;
+
+    const minStart = Math.min(...selected.map((r) => r.start));
+    this.clipboard = selected.map((r) => {
+      const data = this.getRegionLabelData(r);
+      return {
+        offset: r.start - minStart,
+        duration: r.end - r.start,
+        chordSymbol: data.chordSymbol,
+        comment: data.comment,
+      };
+    });
+    return true;
+  }
+
+  public pasteAt(time: number) {
+    if (this.clipboard.length === 0) return;
+
+    const newIds: string[] = [];
+    this.clipboard.forEach((entry) => {
+      const start = time + entry.offset;
+      const end = start + entry.duration;
+      const overlap = this.wsRegions
+        .getRegions()
+        .some((r) => start < r.end && end > r.start);
+      if (overlap) return;
+
+      const r = this.wsRegions.addRegion({
+        start,
+        end,
+        content: this.createLabelElement({
+          chordSymbol: entry.chordSymbol,
+          comment: entry.comment,
+        }),
+        color: COLOR_DEFAULT,
+      });
+      this.styleRegionElement(r, {
+        chordSymbol: entry.chordSymbol,
+        comment: entry.comment,
+      });
+      this.onRegionChange({
+        id: r.id,
+        start: r.start,
+        end: r.end,
+        content: entry.chordSymbol,
+        comment: entry.comment,
+      });
+      newIds.push(r.id);
+    });
+
+    if (newIds.length > 0) {
+      this.selectedIds = new Set(newIds);
+      this.selectedRegionId = newIds[newIds.length - 1];
+      this.refreshSelectionStyles();
+    }
   }
 
   public setPlayheadTime(time: number) {
@@ -402,6 +540,29 @@ export class RegionManager {
     step = 0.1,
   ) {
     if (!this.selectedRegionId) return;
+
+    if (mode === "move" && this.selectedIds.size > 1) {
+      const delta = step * direction;
+      const regions = [...this.selectedIds]
+        .map((id) => this.get(id))
+        .filter((r): r is NonNullable<typeof r> => !!r);
+      if (regions.some((r) => r.start + delta < 0)) return;
+
+      regions.forEach((r) => {
+        const newStart = r.start + delta;
+        r.setOptions({ start: newStart, end: newStart + (r.end - r.start) });
+        const labelData = this.getRegionLabelData(r);
+        this.onRegionChange({
+          id: r.id,
+          start: r.start,
+          end: r.end,
+          content: labelData.chordSymbol,
+          comment: labelData.comment,
+        });
+      });
+      return;
+    }
+
     const r = this.get(this.selectedRegionId);
     if (!r) return;
 
@@ -414,6 +575,15 @@ export class RegionManager {
       if (newEnd - r.start < MIN_DURATION) newEnd = r.start + MIN_DURATION;
       r.setOptions({ end: newEnd });
     }
+
+    const labelData = this.getRegionLabelData(r);
+    this.onRegionChange({
+      id: r.id,
+      start: r.start,
+      end: r.end,
+      content: labelData.chordSymbol,
+      comment: labelData.comment,
+    });
   }
 
   public setDefaultDuration(duration: number) {

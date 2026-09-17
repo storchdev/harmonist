@@ -22,6 +22,9 @@
         ["Tab / Shift + Tab", "Select next / previous chord"],
         ["A", "Add chord at playhead"],
         ["E / Enter", "Edit selected chord"],
+        ["Ctrl / Cmd + Click", "Add / remove chord from selection"],
+        ["Ctrl / Cmd + C", "Copy selected chord(s)"],
+        ["Ctrl / Cmd + V", "Paste chord(s) at playhead"],
         ["Esc", "Deselect chord"],
         ["Delete / Backspace", "Delete selected chord"],
       ],
@@ -29,10 +32,11 @@
     {
       title: "Selected region",
       rows: [
-        ["← / h · → / l", "Move region"],
+        ["← / h · → / l", "Move region (all selected together)"],
         ["Shift + ← / →", "Move region (fine)"],
         ["Alt + ← / →", "Drag end time"],
         ["Alt + Shift + ← / →", "Drag end time (fine)"],
+        ["Drag", "Move region (dragging any selected region moves the rest with it)"],
       ],
     },
     {
