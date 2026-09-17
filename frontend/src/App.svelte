@@ -639,10 +639,9 @@
         initialZoom={projectStore.current.settings?.zoom}
         initialScrollPosition={projectStore.current.settings?.scrollPosition}
         initialChordLength={projectStore.current.settings?.defaultChordLength}
-        onZoomChange={(zoom: number) =>
-          updateSettings({ zoom }, { silent: true })}
+        onZoomChange={(zoom: number) => updateSettings({ zoom })}
         onScrollChange={(scrollPosition: number) =>
-          updateSettings({ scrollPosition }, { silent: true })}
+          updateSettings({ scrollPosition })}
         onReady={applySettingsToController}
       />
     </section>
