@@ -107,14 +107,16 @@
     );
 
     const unsubscribeScroll = controller.onScrollStateChange((state) => {
-      scrollPosition = state.position;
       maxScroll = state.max > 0 ? state.max : 1;
       canScroll = state.canScroll;
       if (state.zoom !== currentZoom) {
         currentZoom = state.zoom;
         onZoomChange?.(state.zoom);
       }
-      onScrollChange?.(state.position);
+      if (state.position !== scrollPosition) {
+        scrollPosition = state.position;
+        onScrollChange?.(state.position);
+      }
     });
 
     return () => {
@@ -134,9 +136,14 @@
     if (controller && controller.isReady) {
       if (!hasAppliedInitialViewState) {
         hasAppliedInitialViewState = true;
-        if (initialZoom !== undefined) controller.setZoom(initialZoom);
-        if (initialScrollPosition)
+        if (initialZoom !== undefined) {
+          currentZoom = initialZoom;
+          controller.setZoom(initialZoom);
+        }
+        if (initialScrollPosition) {
+          scrollPosition = initialScrollPosition;
           controller.setScrollPosition(initialScrollPosition);
+        }
       }
       onReady?.();
     }
