@@ -36,6 +36,7 @@ export class WaveformController {
   private zoomLevel = 50;
   private trackVolume = 1;
   private trackMuted = false;
+  private playheadListeners = new Set<(t: number) => void>();
 
   constructor(
     container: HTMLElement,
@@ -136,6 +137,7 @@ export class WaveformController {
     this.ws.on("pause", () => {
       this.isPlaying = false;
       this.player.stopAll();
+      this.playheadListeners.forEach((cb) => cb(this.ws.getCurrentTime()));
     });
 
     this.ws.on("seeking", (t) => {
@@ -146,6 +148,7 @@ export class WaveformController {
       this.regions.select(null);
       this.notes.select(null);
       this.regions.setPlayheadTime(t);
+      this.playheadListeners.forEach((cb) => cb(t));
     });
 
     this.ws.on("timeupdate", (t) => {
@@ -297,6 +300,15 @@ export class WaveformController {
   setTrackMuted(muted: boolean) {
     this.trackMuted = muted;
     this.ws.setVolume(muted ? 0 : this.trackVolume);
+  }
+
+  setPlayheadTime(t: number) {
+    this.ws.setTime(Math.max(0, Math.min(this.duration, t)));
+  }
+
+  onPlayheadPersist(callback: (t: number) => void) {
+    this.playheadListeners.add(callback);
+    return () => this.playheadListeners.delete(callback);
   }
 
   jumpToStart() {

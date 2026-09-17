@@ -69,6 +69,26 @@ frontend/src/
      way: it updates optimistically before the echo event, so it can mask
      genuine user-driven changes, and it isn't set at restore time, so it
      can also flag a plain reload as a change.
+  3. `WaveformController.onScrollStateChange()`'s subscription callback
+     fires once synchronously on subscribe (in `onMount`, via its internal
+     `emit()`), *before* `decode` — with `position`/`max` both 0 since
+     nothing is loaded yet. Confirmed via `console.debug` trace: that
+     pre-decode zero was compared against the real saved `scrollPosition`
+     and reported as a "change" before the restore effect ever got a
+     chance to run, which both marked the project dirty on open and
+     overwrote the saved `scrollPosition` in `projectStore` with `0` — so
+     by the time the restore effect read `initialScrollPosition`, it had
+     already been clobbered back to 0. (WaveSurfer's `ResizeObserver` on
+     the scroll container, debounced 100ms and re-anchoring `scrollLeft`
+     on firing, is a second, smaller source of the same kind of drift
+     after `decode`.) Fix in `Waveform.svelte`: `isRestoringViewState`
+     starts `true` (not `false`) so the pre-decode emit is suppressed from
+     the very first event, stays `true` through an extra ~150ms-delayed
+     re-apply of the restore (past the resize debounce window), and only
+     flips back to `false` once settled — at which point
+     `lastReportedZoom`/`lastReportedScrollPosition` are resynced to
+     whatever WaveSurfer actually landed on, not the originally-requested
+     values, so a later genuine user change is compared against reality.
 
 ### Audio engine
 

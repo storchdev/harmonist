@@ -644,10 +644,13 @@
         }}
         initialZoom={projectStore.current.settings?.zoom}
         initialScrollPosition={projectStore.current.settings?.scrollPosition}
+        initialPlayheadTime={projectStore.current.settings?.playheadTime}
         initialChordLength={projectStore.current.settings?.defaultChordLength}
         onZoomChange={(zoom: number) => updateSettings({ zoom })}
         onScrollChange={(scrollPosition: number) =>
           updateSettings({ scrollPosition })}
+        onPlayheadChange={(playheadTime: number) =>
+          updateSettings({ playheadTime })}
         onReady={applySettingsToController}
       />
     </section>

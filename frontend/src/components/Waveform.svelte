@@ -22,9 +22,11 @@
     onNoteChange,
     initialZoom,
     initialScrollPosition,
+    initialPlayheadTime,
     initialChordLength,
     onZoomChange,
     onScrollChange,
+    onPlayheadChange,
     onReady,
   } = $props<{
     audioUrl: string;
@@ -34,9 +36,11 @@
     onNoteChange: (e: any) => void;
     initialZoom?: number;
     initialScrollPosition?: number;
+    initialPlayheadTime?: number;
     initialChordLength?: number;
     onZoomChange?: (zoom: number) => void;
     onScrollChange?: (position: number) => void;
+    onPlayheadChange?: (time: number) => void;
     onReady?: () => void;
   }>();
 
@@ -68,6 +72,20 @@
   let maxScroll = $state(1);
   let canScroll = $state(false);
   let hasAppliedInitialViewState = false;
+  let viewStateRestoreToken = 0;
+  // While true, the scroll/zoom subscription below updates the UI-bound
+  // display values but does NOT call onZoomChange/onScrollChange or touch
+  // lastReported*. Starts true (not false) because WaveformController's
+  // onScrollStateChange fires its subscribe-time emit() synchronously in
+  // onMount, before "decode" — with position/max both 0 since nothing is
+  // loaded yet. That bogus pre-decode zero would otherwise get compared
+  // against the real saved scrollPosition, reported as a "change", and
+  // persisted right back over the saved value before the restore effect
+  // below ever gets a chance to read it. WaveSurfer's own debounced
+  // container-resize can also shift scrollLeft out from under a
+  // freshly-restored position (see AGENTS.md trap #3), which is the
+  // other reason this stays suppressed through the restore+settle window.
+  let isRestoringViewState = true;
   // Tracks the last value actually reported via onZoomChange/onScrollChange,
   // separate from currentZoom/scrollPosition (which the UI controls bind to
   // optimistically). Comparing against the UI-bound values would miss
@@ -76,6 +94,7 @@
   // user changes.
   let lastReportedZoom = initialZoom ?? 50;
   let lastReportedScrollPosition = initialScrollPosition ?? 0;
+  let lastReportedPlayheadTime = initialPlayheadTime ?? 0;
 
   // Validation State
   let isInvalid = $state(false);
@@ -149,6 +168,7 @@
       canScroll = state.canScroll;
       currentZoom = state.zoom;
       scrollPosition = state.position;
+      if (isRestoringViewState) return;
       if (state.zoom !== lastReportedZoom) {
         lastReportedZoom = state.zoom;
         onZoomChange?.(state.zoom);
@@ -159,8 +179,17 @@
       }
     });
 
+    const unsubscribePlayhead = controller.onPlayheadPersist((time) => {
+      if (isRestoringViewState) return;
+      if (time !== lastReportedPlayheadTime) {
+        lastReportedPlayheadTime = time;
+        onPlayheadChange?.(time);
+      }
+    });
+
     return () => {
       unsubscribeScroll();
+      unsubscribePlayhead();
       controller?.destroy();
     };
   });
@@ -176,16 +205,46 @@
     if (controller && controller.isReady) {
       if (!hasAppliedInitialViewState) {
         hasAppliedInitialViewState = true;
-        if (initialZoom !== undefined) {
-          currentZoom = initialZoom;
-          lastReportedZoom = initialZoom;
-          controller.setZoom(initialZoom);
-        }
-        if (initialScrollPosition) {
-          scrollPosition = initialScrollPosition;
-          lastReportedScrollPosition = initialScrollPosition;
-          controller.setScrollPosition(initialScrollPosition);
-        }
+        const token = ++viewStateRestoreToken;
+        isRestoringViewState = true;
+        const restoreViewState = () => {
+          if (!controller || viewStateRestoreToken !== token) return;
+          if (initialZoom !== undefined) {
+            currentZoom = initialZoom;
+            controller.setZoom(initialZoom);
+          }
+          if (initialScrollPosition) {
+            scrollPosition = initialScrollPosition;
+            controller.setScrollPosition(initialScrollPosition);
+          }
+          if (initialPlayheadTime) {
+            controller.setPlayheadTime(initialPlayheadTime);
+          }
+        };
+        // WaveSurfer debounces its container-width ResizeObserver by
+        // 100ms and re-anchors scrollLeft on that resize, which silently
+        // undoes a scroll restore applied immediately on "decode" (before
+        // the waveform panel has finished settling into its final layout
+        // width). Apply once immediately for a snappy first paint, then
+        // once more after that debounce window to win the fight. While
+        // this is in flight, isRestoringViewState suppresses
+        // onZoomChange/onScrollChange so the resize-driven drift never
+        // gets misread as a user edit (dirtying the project or
+        // overwriting the saved position on open).
+        restoreViewState();
+        setTimeout(() => {
+          restoreViewState();
+          setTimeout(() => {
+            if (!controller || viewStateRestoreToken !== token) return;
+            isRestoringViewState = false;
+            // Resync to whatever WaveSurfer actually settled on, so a
+            // later genuine user change is compared against reality
+            // rather than the originally-requested restore values.
+            lastReportedZoom = currentZoom;
+            lastReportedScrollPosition = scrollPosition;
+            lastReportedPlayheadTime = controller.getCurrentTime();
+          }, 150);
+        }, 150);
       }
       onReady?.();
     }

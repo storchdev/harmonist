@@ -21,6 +21,7 @@ export interface TimelineNote {
 export interface EditorSettings {
   zoom: number;
   scrollPosition: number;
+  playheadTime: number;
   synthVolume: number;
   trackVolume: number;
   synthMuted: boolean;
@@ -34,6 +35,7 @@ export function defaultEditorSettings(): EditorSettings {
   return {
     zoom: 50,
     scrollPosition: 0,
+    playheadTime: 0,
     synthVolume: -10,
     trackVolume: 1,
     synthMuted: false,
