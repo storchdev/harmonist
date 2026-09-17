@@ -12,7 +12,10 @@ export class InputManager {
     container.addEventListener(
       "wheel",
       (e) => {
-        if (e.ctrlKey) return;
+        // Only zoom on an explicit pinch/Ctrl+scroll gesture. Plain scrolling
+        // (including trackpad momentum) must not zoom - it previously did,
+        // which could fling the zoom to its max in a single flick.
+        if (!e.ctrlKey && !e.metaKey) return;
         e.preventDefault();
         const delta = e.deltaY > 0 ? -10 : 10;
         this.controller.modifyZoom(delta);
@@ -62,6 +65,18 @@ export class InputManager {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
       e.preventDefault();
       this.controller.pasteRegionsAtPlayhead();
+      return;
+    }
+
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "0") {
+      e.preventDefault();
+      this.controller.jumpToStart();
+      return;
+    }
+
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "$") {
+      e.preventDefault();
+      this.controller.jumpToEnd();
       return;
     }
 

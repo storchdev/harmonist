@@ -134,6 +134,16 @@ earlier design pass specified Fraunces/Manrope and a fixed warm-light
 palette, but that was superseded by the Shiki-driven theming system above
 and is no longer accurate.
 
+- **Inter's vertical centering quirk.** Inter's font metrics reserve more
+  space above the baseline than below, so flex-centered (`align-items:
+  center`) text in `.btn` still reads as sitting slightly high no matter
+  how `line-height` is tuned — `line-height` alone can't fix it since the
+  asymmetry lives in the font's ascent/descent, not the line box. The fix
+  is asymmetric top/bottom padding on `.btn` (more top, less bottom) to
+  shift the whole centering region down by ~1px, paired with a
+  counter-`transform: translateY(-1px)` on `.btn svg` so icons — which
+  don't have this offset — aren't dragged down along with the text.
+
 ## 5. Checks
 
 Run from `frontend/`:

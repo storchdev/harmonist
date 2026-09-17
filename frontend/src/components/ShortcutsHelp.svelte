@@ -50,7 +50,7 @@
     {
       title: "Timeline",
       rows: [
-        ["Scroll", "Zoom in / out"],
+        ["Ctrl / Cmd + Scroll", "Zoom in / out"],
         ["+ / -", "Zoom in / out"],
       ],
     },
@@ -59,6 +59,8 @@
       rows: [
         ["h", "Same as ←"],
         ["l", "Same as →"],
+        ["0", "Jump to start of timeline"],
+        ["$", "Jump to end of timeline"],
       ],
     },
     {

@@ -293,6 +293,14 @@ export class WaveformController {
     this.ws.setVolume(muted ? 0 : this.trackVolume);
   }
 
+  jumpToStart() {
+    this.ws.setTime(0);
+  }
+
+  jumpToEnd() {
+    this.ws.setTime(this.duration);
+  }
+
   seek(amount: number) {
     const target = Math.max(
       0,

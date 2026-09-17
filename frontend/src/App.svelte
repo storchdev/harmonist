@@ -19,7 +19,7 @@
     Upload,
     Download,
     Save,
-    X,
+    Home,
     Play,
     Pause,
     Plus,
@@ -566,9 +566,9 @@
         <button
           class="btn-ghost btn-ghost-danger"
           onclick={() => projectStore.close()}
-          title="Close project"
+          title="Back to home"
         >
-          <X size={16} />
+          <Home size={16} />
         </button>
       </div>
     </section>
@@ -634,7 +634,7 @@
         </div>
 
         <button
-          class="btn btn-outline"
+          class="btn btn-outline btn-note"
           onclick={() => waveformRef?.addNoteAtCurrentTime()}
         >
           <StickyNote size={16} /> Add Note
