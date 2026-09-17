@@ -57,6 +57,14 @@
   let maxScroll = $state(1);
   let canScroll = $state(false);
   let hasAppliedInitialViewState = false;
+  // Tracks the last value actually reported via onZoomChange/onScrollChange,
+  // separate from currentZoom/scrollPosition (which the UI controls bind to
+  // optimistically). Comparing against the UI-bound values would miss
+  // slider-driven changes (bind:value updates them before the wavesurfer
+  // event echoes back) and would also misreport programmatic restores as
+  // user changes.
+  let lastReportedZoom = initialZoom ?? 50;
+  let lastReportedScrollPosition = initialScrollPosition ?? 0;
 
   // Validation State
   let isInvalid = $state(false);
@@ -109,12 +117,14 @@
     const unsubscribeScroll = controller.onScrollStateChange((state) => {
       maxScroll = state.max > 0 ? state.max : 1;
       canScroll = state.canScroll;
-      if (state.zoom !== currentZoom) {
-        currentZoom = state.zoom;
+      currentZoom = state.zoom;
+      scrollPosition = state.position;
+      if (state.zoom !== lastReportedZoom) {
+        lastReportedZoom = state.zoom;
         onZoomChange?.(state.zoom);
       }
-      if (state.position !== scrollPosition) {
-        scrollPosition = state.position;
+      if (state.position !== lastReportedScrollPosition) {
+        lastReportedScrollPosition = state.position;
         onScrollChange?.(state.position);
       }
     });
@@ -138,10 +148,12 @@
         hasAppliedInitialViewState = true;
         if (initialZoom !== undefined) {
           currentZoom = initialZoom;
+          lastReportedZoom = initialZoom;
           controller.setZoom(initialZoom);
         }
         if (initialScrollPosition) {
           scrollPosition = initialScrollPosition;
+          lastReportedScrollPosition = initialScrollPosition;
           controller.setScrollPosition(initialScrollPosition);
         }
       }
