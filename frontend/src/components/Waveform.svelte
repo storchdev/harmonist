@@ -124,10 +124,10 @@
   });
 
   $effect(() => {
-    if (controller && audioUrl) {
+    const url = audioUrl;
+    if (controller && url) {
       hasAppliedInitialViewState = false;
-      if (initialZoom !== undefined) currentZoom = initialZoom;
-      controller.load(audioUrl);
+      controller.load(url);
     }
   });
   $effect(() => {
