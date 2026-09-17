@@ -46,6 +46,7 @@ export class WaveformController {
       onEditRegion: (id: string) => void;
       onNoteChange: (event: any) => void;
       onEditNote: (id: string) => void;
+      onPreviewNote: (id: string, rect: DOMRect) => void;
       onShowNoteContextMenu: (e: MouseEvent, id: string) => void;
     },
     options: { initialZoom?: number; initialChordLength?: number } = {},
@@ -77,6 +78,7 @@ export class WaveformController {
     this.notes = new NoteManager(this.ws, {
       onNoteChange: callbacks.onNoteChange,
       onEditNote: callbacks.onEditNote,
+      onPreviewNote: callbacks.onPreviewNote,
       onShowContextMenu: callbacks.onShowNoteContextMenu,
     });
     this.input = new InputManager(this, container);
@@ -323,10 +325,13 @@ export class WaveformController {
     if (!id) return;
     const r = this.regions.get(id);
     if (!r) return;
+    this.scrollRangeIntoView(r.start, r.end);
+  }
 
+  private scrollRangeIntoView(start: number, end: number) {
     const pxPerSec = this.zoomLevel;
-    const startPx = r.start * pxPerSec;
-    const endPx = r.end * pxPerSec;
+    const startPx = start * pxPerSec;
+    const endPx = end * pxPerSec;
     const viewport = this.ws.getWidth();
     const currentScroll = this.ws.getScroll();
     const margin = Math.min(60, viewport / 4);
@@ -336,6 +341,15 @@ export class WaveformController {
     } else if (endPx > currentScroll + viewport - margin) {
       this.ws.setScroll(endPx - viewport + margin);
     }
+  }
+
+  jumpToNote(id: string) {
+    const n = this.notes.get(id);
+    if (!n) return;
+    this.ws.setTime(n.start);
+    this.notes.select(id);
+    this.regions.select(null);
+    this.scrollRangeIntoView(n.start, n.start);
   }
 
   seekToBoundary(direction: number) {

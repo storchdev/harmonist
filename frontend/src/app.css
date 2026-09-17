@@ -666,6 +666,11 @@ select {
   color: var(--danger);
 }
 
+.project-actions .btn-ghost:not(.btn-ghost-danger):hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
 /* Toolbar */
 
 .toolbar {
@@ -714,7 +719,6 @@ select {
 }
 
 .chord-length-input {
-  width: 3.1rem;
   height: 38px;
   box-sizing: border-box;
   padding: 2px 1.35rem 0 0.5rem;
@@ -724,6 +728,7 @@ select {
   background: color-mix(in srgb, var(--accent) 12%, var(--bg));
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
   color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  transition: width 0.1s ease;
 }
 
 .chord-length-input:focus {
@@ -1150,6 +1155,96 @@ select {
 .load-project-delete {
   flex: 0 0 auto;
   margin-right: 0.4rem;
+}
+
+.note-search-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
+}
+
+.note-search-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.note-search-row:hover {
+  background: var(--bg-inset);
+}
+
+.note-search-time {
+  flex: 0 0 auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.note-search-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/*
+ * Note preview bubble (Waveform.svelte): rendered at the page level, not
+ * inside WaveSurfer's shadow DOM, so plain CSS classes work here unlike
+ * the note-marker-content styling above.
+ */
+.note-preview-bubble {
+  position: absolute;
+  z-index: 110;
+  transform: translate(-50%, calc(-100% - 0.6rem));
+  width: max-content;
+  max-width: min(260px, calc(100vw - 3rem));
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  pointer-events: none;
+}
+
+.note-preview-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--border-strong);
+}
+
+.note-preview-bubble::before {
+  content: "";
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--bg-elevated);
+  z-index: 1;
 }
 
 .load-project-confirm {

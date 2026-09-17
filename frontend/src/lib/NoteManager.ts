@@ -68,6 +68,7 @@ export class NoteManager {
     callbacks: {
       onNoteChange: (event: any) => void;
       onEditNote: (id: string) => void;
+      onPreviewNote: (id: string, rect: DOMRect) => void;
       onShowContextMenu: (e: MouseEvent, id: string) => void;
     },
   ) {
@@ -85,10 +86,15 @@ export class NoteManager {
   }
 
   private setupEvents(cbs: any) {
+    // Single click just selects the note and shows a read-only preview
+    // bubble above it. Editing moved to the right-click context menu, so
+    // a stray click doesn't drop the user straight into an edit modal.
     this.wsNotes.on("region-clicked", (note, e) => {
       e.stopPropagation();
       this.select(note.id);
-      cbs.onEditNote(note.id);
+      if (note.element) {
+        cbs.onPreviewNote(note.id, note.element.getBoundingClientRect());
+      }
     });
 
     this.wsNotes.on("region-double-clicked", (note, e) => {

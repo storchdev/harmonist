@@ -5,7 +5,14 @@
   import type { ChordRegion, TimelineNote } from "../types";
   import { Chord } from "@tonaljs/tonal";
   import { parseChordInput } from "../lib/chordParsing";
-  import { X, Pencil, Trash2, Sparkles, StickyNote } from "@lucide/svelte";
+  import {
+    X,
+    Pencil,
+    Trash2,
+    Sparkles,
+    StickyNote,
+  } from "@lucide/svelte";
+  import NoteSearchModal from "./NoteSearchModal.svelte";
 
   let {
     audioUrl,
@@ -52,6 +59,10 @@
   let noteContextMenu = $state<{ x: number; y: number; noteId: string } | null>(
     null,
   );
+  let notePreview = $state<{ id: string; text: string; x: number; y: number } | null>(
+    null,
+  );
+  let noteSearchOpen = $state(false);
   let currentZoom = $state(initialZoom ?? 50);
   let scrollPosition = $state(0);
   let maxScroll = $state(1);
@@ -80,8 +91,10 @@
           aiResult = null;
           contextMenu = null;
           noteContextMenu = null;
+          notePreview = null;
         },
         onShowContextMenu: (e, id) => {
+          notePreview = null;
           const panelRect = panelEl?.getBoundingClientRect();
           if (!panelRect) {
             contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
@@ -97,7 +110,24 @@
         onEditRegion: (id) => startEditing(id),
         onNoteChange: (e) => onNoteChange(e),
         onEditNote: (id) => startEditingNote(id),
+        onPreviewNote: (id, rect) => {
+          const text =
+            (notesData as TimelineNote[]).find((n) => n.id === id)?.text ??
+            "";
+          const panelRect = panelEl?.getBoundingClientRect();
+          if (!panelRect) {
+            notePreview = { id, text, x: rect.left + rect.width / 2, y: rect.top };
+            return;
+          }
+          notePreview = {
+            id,
+            text,
+            x: rect.left + rect.width / 2 - panelRect.left,
+            y: rect.top - panelRect.top,
+          };
+        },
         onShowNoteContextMenu: (e, id) => {
+          notePreview = null;
           const panelRect = panelEl?.getBoundingClientRect();
           if (!panelRect) {
             noteContextMenu = { x: e.clientX, y: e.clientY, noteId: id };
@@ -177,6 +207,10 @@
     controller?.addNoteAtCurrentTime("");
     controller?.editSelectedNote();
   };
+  export const openNoteSearch = () => {
+    notePreview = null;
+    noteSearchOpen = true;
+  };
   export const setSynthVolume = (v: number) => controller?.setSynthVolume(v);
   export const setTrackVolume = (v: number) => controller?.setTrackVolume(v);
   export const setSynthMuted = (muted: boolean) =>
@@ -236,6 +270,7 @@
     };
     isInvalid = false; // Reset error
     contextMenu = null;
+    notePreview = null;
   }
 
   function saveEdit() {
@@ -276,6 +311,7 @@
     noteEditState = { id, text: n.text };
     contextMenu = null;
     noteContextMenu = null;
+    notePreview = null;
   }
 
   function saveNoteEdit() {
@@ -294,6 +330,12 @@
       controller.deleteNote(noteContextMenu.noteId);
       noteContextMenu = null;
     }
+  }
+
+  function jumpToNote(id: string) {
+    controller?.jumpToNote(id);
+    notePreview = null;
+    noteSearchOpen = false;
   }
 
   function formatTime(t: number) {
@@ -478,6 +520,33 @@
         <button class="btn btn-primary" onclick={saveNoteEdit}>Save</button>
       </div>
     </div>
+  {/if}
+
+  {#if notePreview}
+    <div
+      class="note-preview-bubble"
+      style="left: {notePreview.x}px; top: {notePreview.y}px"
+    >
+      {notePreview.text.trim() || "(empty note)"}
+    </div>
+    <button
+      type="button"
+      class="fixed inset-0 z-[99]"
+      aria-label="Close note preview"
+      onclick={() => (notePreview = null)}
+      oncontextmenu={(e) => {
+        e.preventDefault();
+        notePreview = null;
+      }}
+    ></button>
+  {/if}
+
+  {#if noteSearchOpen}
+    <NoteSearchModal
+      notes={notesData}
+      onClose={() => (noteSearchOpen = false)}
+      onSelect={jumpToNote}
+    />
   {/if}
 
   {#if noteContextMenu}

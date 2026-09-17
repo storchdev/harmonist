@@ -35,6 +35,7 @@
     Undo2,
     Palette,
     StickyNote,
+    Search,
   } from "@lucide/svelte";
 
   const oscillatorLabels: Record<string, string> = {
@@ -368,6 +369,11 @@
       projectStore.undo();
       return;
     }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      void handleSaveProject();
+      return;
+    }
     if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "m") {
       e.preventDefault();
       if (e.shiftKey) {
@@ -675,6 +681,10 @@
             bind:value={defaultChordLength}
             oninput={updateDefaultChordLength}
             class="input-field chord-length-input"
+            style="width: {Math.max(
+              2.4,
+              String(defaultChordLength).length * 0.62 + 1.35,
+            )}rem"
           />
           <span class="chord-length-suffix">s</span>
         </div>
@@ -684,6 +694,14 @@
           onclick={() => waveformRef?.addNoteAtCurrentTime()}
         >
           <StickyNote size={16} /> Add Note
+        </button>
+
+        <button
+          class="btn-ghost"
+          title="Search notes"
+          onclick={() => waveformRef?.openNoteSearch()}
+        >
+          <Search size={16} />
         </button>
 
         <button class="btn btn-ai" onclick={triggerAi} title="Identify chord">

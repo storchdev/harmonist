@@ -68,7 +68,10 @@
     },
     {
       title: "History",
-      rows: [["Ctrl / Cmd + Z", "Undo last change"]],
+      rows: [
+        ["Ctrl / Cmd + Z", "Undo last change"],
+        ["Ctrl / Cmd + S", "Save project"],
+      ],
     },
   ];
 </script>
