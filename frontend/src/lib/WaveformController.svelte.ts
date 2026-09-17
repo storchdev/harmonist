@@ -121,7 +121,11 @@ export class WaveformController {
           const remaining = currentRegion.end - t;
           // Guard against extremely short durations which cause "Quiet/Clicky" envelopes
           if (remaining > 0.05) {
-            this.player.playChord(data.chord_symbol, remaining, data.octave ?? 4);
+            this.player.playChord(
+              data.chord_symbol,
+              remaining,
+              data.octave ?? 4,
+            );
           }
         }
       }

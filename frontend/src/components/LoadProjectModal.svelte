@@ -66,7 +66,9 @@
       <p class="dropdown-empty">Loading…</p>
     {:else if filtered().length === 0}
       <p class="dropdown-empty">
-        {projects.length === 0 ? "No projects found yet." : "No projects match your search."}
+        {projects.length === 0
+          ? "No projects found yet."
+          : "No projects match your search."}
       </p>
     {:else}
       {#each filtered() as p (p.id)}

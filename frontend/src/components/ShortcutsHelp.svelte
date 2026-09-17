@@ -36,7 +36,10 @@
         ["Shift + ← / →", "Move region (fine)"],
         ["Alt + ← / →", "Drag end time"],
         ["Alt + Shift + ← / →", "Drag end time (fine)"],
-        ["Drag", "Move region (dragging any selected region moves the rest with it)"],
+        [
+          "Drag",
+          "Move region (dragging any selected region moves the rest with it)",
+        ],
       ],
     },
     {

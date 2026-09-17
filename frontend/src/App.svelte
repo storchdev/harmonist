@@ -60,7 +60,10 @@
   let isAiLoading = $state(false);
   let syncedProjectId = $state<string | null>(null);
 
-  function updateSettings(partial: Partial<EditorSettings>, opts: { silent?: boolean } = {}) {
+  function updateSettings(
+    partial: Partial<EditorSettings>,
+    opts: { silent?: boolean } = {},
+  ) {
     if (!projectStore.current?.settings) return;
     Object.assign(projectStore.current.settings, partial);
     if (!opts.silent) projectStore.dirty = true;
@@ -155,8 +158,7 @@
       DEFAULT_LIGHT_THEME,
   );
   let darkThemeId = $state<BundledTheme>(
-    (localStorage.getItem("darkThemeId") as BundledTheme) ||
-      DEFAULT_DARK_THEME,
+    (localStorage.getItem("darkThemeId") as BundledTheme) || DEFAULT_DARK_THEME,
   );
   let showAccentMenu = $state(false);
   let themeSearch = $state("");
@@ -167,7 +169,13 @@
 
   function hexToRgb(hex: string) {
     const h = hex.replace("#", "").slice(0, 6);
-    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+    const full =
+      h.length === 3
+        ? h
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : h;
     const n = parseInt(full, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   }
@@ -216,8 +224,10 @@
     const colors = shikiTheme.colors ?? {};
     const tokenColors = shikiTheme.tokenColors;
 
-    const bg = colors["editor.background"] || (mode === "dark" ? "#0d0d10" : "#f7f7f8");
-    const text = colors["editor.foreground"] || (mode === "dark" ? "#f2f2f4" : "#17171a");
+    const bg =
+      colors["editor.background"] || (mode === "dark" ? "#0d0d10" : "#f7f7f8");
+    const text =
+      colors["editor.foreground"] || (mode === "dark" ? "#f2f2f4" : "#17171a");
     const surface =
       colors["sideBar.background"] ||
       colors["panel.background"] ||
@@ -235,7 +245,11 @@
     const accent =
       colors["button.background"] ||
       colors["focusBorder"]?.slice(0, 7) ||
-      findTokenColor(tokenColors, ["entity.name.function", "support.function"], mode === "dark" ? "#7aa2f7" : "#2e7de9");
+      findTokenColor(
+        tokenColors,
+        ["entity.name.function", "support.function"],
+        mode === "dark" ? "#7aa2f7" : "#2e7de9",
+      );
     const secondary = findTokenColor(
       tokenColors,
       ["keyword.control", "storage.type", "keyword"],
@@ -244,18 +258,32 @@
 
     return {
       bg,
-      bgElevated: colors["editor.background"] ? shade(bg, mode === "dark" ? 0.04 : 0.02) : bg,
+      bgElevated: colors["editor.background"]
+        ? shade(bg, mode === "dark" ? 0.04 : 0.02)
+        : bg,
       bgInset: inset,
       border,
       borderStrong: shade(border, mode === "dark" ? 0.18 : -0.15),
       text,
-      textMuted: colors["descriptionForeground"] || colors["editorLineNumber.foreground"] || shade(text, mode === "dark" ? -0.3 : 0.3),
+      textMuted:
+        colors["descriptionForeground"] ||
+        colors["editorLineNumber.foreground"] ||
+        shade(text, mode === "dark" ? -0.3 : 0.3),
       textFaint: shade(text, mode === "dark" ? -0.5 : 0.5),
       accent,
       secondary,
-      amber: findTokenColor(tokenColors, ["constant.numeric", "number"], colors["terminal.ansiYellow"] || "#e0af68"),
-      success: colors["terminal.ansiGreen"] || findTokenColor(tokenColors, ["string"], "#9ece6a"),
-      danger: colors["terminal.ansiRed"] || colors["errorForeground"] || findTokenColor(tokenColors, ["keyword.control"], "#f7768e"),
+      amber: findTokenColor(
+        tokenColors,
+        ["constant.numeric", "number"],
+        colors["terminal.ansiYellow"] || "#e0af68",
+      ),
+      success:
+        colors["terminal.ansiGreen"] ||
+        findTokenColor(tokenColors, ["string"], "#9ece6a"),
+      danger:
+        colors["terminal.ansiRed"] ||
+        colors["errorForeground"] ||
+        findTokenColor(tokenColors, ["keyword.control"], "#f7768e"),
     };
   }
 
@@ -291,7 +319,10 @@
     root.setProperty("--success-soft", withAlpha(raw.success, softAlpha));
     root.setProperty("--danger", raw.danger);
     root.setProperty("--danger-soft", withAlpha(raw.danger, softAlpha));
-    root.setProperty("--focus-ring", withAlpha(raw.accent, theme === "dark" ? 0.4 : 0.35));
+    root.setProperty(
+      "--focus-ring",
+      withAlpha(raw.accent, theme === "dark" ? 0.4 : 0.35),
+    );
     root.setProperty(
       "--wave-color",
       shade(raw.accent, theme === "dark" ? -0.45 : 0.5),
@@ -348,10 +379,16 @@
   }
 
   function handleWindowClick(e: MouseEvent) {
-    if (showSynthMenu && !(e.target as HTMLElement).closest(".synth-dropdown")) {
+    if (
+      showSynthMenu &&
+      !(e.target as HTMLElement).closest(".synth-dropdown")
+    ) {
       showSynthMenu = false;
     }
-    if (showAccentMenu && !(e.target as HTMLElement).closest(".accent-dropdown")) {
+    if (
+      showAccentMenu &&
+      !(e.target as HTMLElement).closest(".accent-dropdown")
+    ) {
       showAccentMenu = false;
     }
   }
@@ -501,7 +538,10 @@
           <button class="btn btn-primary" onclick={() => projectStore.create()}>
             <FilePlus size={16} /> New Project
           </button>
-          <button class="btn btn-secondary" onclick={() => (showLoadModal = true)}>
+          <button
+            class="btn btn-secondary"
+            onclick={() => (showLoadModal = true)}
+          >
             <FolderOpen size={16} /> Load Existing
           </button>
           <button class="btn btn-outline" onclick={handleImportClick}>
@@ -556,7 +596,9 @@
         <button
           class="btn-ghost save-btn"
           onclick={handleSaveProject}
-          title={projectStore.dirty ? "Save project (unsaved changes)" : "Save project"}
+          title={projectStore.dirty
+            ? "Save project (unsaved changes)"
+            : "Save project"}
         >
           <Save size={16} />
           {#if projectStore.dirty}
@@ -586,14 +628,19 @@
           } else if (projectStore.current?.notes.some((n) => n.id === e.id)) {
             projectStore.updateNote(e.id, e.text);
           } else {
-            projectStore.current!.notes.push({ id: e.id, time: e.time, text: e.text });
+            projectStore.current!.notes.push({
+              id: e.id,
+              time: e.time,
+              text: e.text,
+            });
             projectStore.current!.notes.sort((a, b) => a.time - b.time);
           }
         }}
         initialZoom={projectStore.current.settings?.zoom}
         initialScrollPosition={projectStore.current.settings?.scrollPosition}
         initialChordLength={projectStore.current.settings?.defaultChordLength}
-        onZoomChange={(zoom: number) => updateSettings({ zoom }, { silent: true })}
+        onZoomChange={(zoom: number) =>
+          updateSettings({ zoom }, { silent: true })}
         onScrollChange={(scrollPosition: number) =>
           updateSettings({ scrollPosition }, { silent: true })}
         onReady={applySettingsToController}
@@ -661,8 +708,14 @@
 
       <div class="toolbar-group">
         <div class="volume-control volume-synth">
-          <button class="btn-ghost" onclick={toggleSynthMute} title="Mute synth">
-            {#if synthMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+          <button
+            class="btn-ghost"
+            onclick={toggleSynthMute}
+            title="Mute synth"
+          >
+            {#if synthMuted}<VolumeX size={16} />{:else}<Volume2
+                size={16}
+              />{/if}
           </button>
           <span class="volume-tag">Synth</span>
           <input
@@ -679,8 +732,14 @@
         </div>
 
         <div class="volume-control volume-track">
-          <button class="btn-ghost" onclick={toggleTrackMute} title="Mute track">
-            {#if trackMuted}<VolumeX size={16} />{:else}<Volume2 size={16} />{/if}
+          <button
+            class="btn-ghost"
+            onclick={toggleTrackMute}
+            title="Mute track"
+          >
+            {#if trackMuted}<VolumeX size={16} />{:else}<Volume2
+                size={16}
+              />{/if}
           </button>
           <span class="volume-tag">Track</span>
           <input
@@ -701,7 +760,10 @@
       <div class="toolbar-divider"></div>
 
       <div class="dropdown synth-dropdown">
-        <button class="btn btn-outline synth-dropdown-btn" onclick={toggleSynthMenu}>
+        <button
+          class="btn btn-outline synth-dropdown-btn"
+          onclick={toggleSynthMenu}
+        >
           {oscillatorLabels[oscillator]}
           <ChevronDown size={14} />
         </button>

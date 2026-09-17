@@ -69,7 +69,10 @@
     />
   </div>
 
-  <div class="action-row" style="justify-content: flex-end; margin-top: 0.4rem;">
+  <div
+    class="action-row"
+    style="justify-content: flex-end; margin-top: 0.4rem;"
+  >
     <button class="btn btn-primary" onclick={onClose}>Done</button>
   </div>
 </div>

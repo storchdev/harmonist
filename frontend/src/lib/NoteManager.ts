@@ -73,7 +73,8 @@ export class NoteManager {
     this.wsNotes = ws.registerPlugin(RegionsPlugin.create());
     this.onNoteChange = callbacks.onNoteChange;
     const styles = getComputedStyle(document.documentElement);
-    this.bgElevated = styles.getPropertyValue("--bg-elevated").trim() || "#17171b";
+    this.bgElevated =
+      styles.getPropertyValue("--bg-elevated").trim() || "#17171b";
     this.amberColor = styles.getPropertyValue("--amber").trim() || "#f59e0b";
     this.setupEvents(callbacks);
   }
@@ -143,7 +144,8 @@ export class NoteManager {
           start: n.time,
           end: n.time,
           content: this.createLabelElement(n.text),
-          color: n.id === this.selectedNoteId ? NOTE_COLOR_SELECTED : NOTE_COLOR,
+          color:
+            n.id === this.selectedNoteId ? NOTE_COLOR_SELECTED : NOTE_COLOR,
           drag: true,
           resize: false,
         });

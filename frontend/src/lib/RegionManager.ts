@@ -27,8 +27,7 @@ export class RegionManager {
   private playheadTime = 0;
   private defaultDuration = 2.0;
   private dragAnchorId: string | null = null;
-  private dragSnapshot: Map<string, { start: number; end: number }> =
-    new Map();
+  private dragSnapshot: Map<string, { start: number; end: number }> = new Map();
 
   private readonly labelStyle: Partial<CSSStyleDeclaration> = {
     position: "absolute",
@@ -57,8 +56,7 @@ export class RegionManager {
     textAlign: "center",
     letterSpacing: "0.01em",
     lineHeight: "1.15",
-    boxShadow:
-      "0 3px 10px color-mix(in srgb, var(--amber) 45%, transparent)",
+    boxShadow: "0 3px 10px color-mix(in srgb, var(--amber) 45%, transparent)",
     whiteSpace: "nowrap",
   };
 
@@ -132,8 +130,7 @@ export class RegionManager {
 
   private getRegionLabelData(region: any): RegionLabelData {
     const labelData = (region as any).harmonistLabelData as
-      | RegionLabelData
-      | undefined;
+      RegionLabelData | undefined;
     if (labelData?.chordSymbol) return labelData;
 
     const contentEl = (region as any).content;
@@ -306,7 +303,9 @@ export class RegionManager {
       current.length !== data.length ||
       current.some((region) => {
         const saved = byIdData.get(region.id);
-        return !saved || saved.start !== region.start || saved.end !== region.end;
+        return (
+          !saved || saved.start !== region.start || saved.end !== region.end
+        );
       });
 
     if (current.length === 0 || needsRebuild) {
@@ -534,11 +533,7 @@ export class RegionManager {
     this.select(sorted[newIdx].id);
   }
 
-  public nudgeSelected(
-    direction: number,
-    mode: "move" | "resize",
-    step = 0.1,
-  ) {
+  public nudgeSelected(direction: number, mode: "move" | "resize", step = 0.1) {
     if (!this.selectedRegionId) return;
 
     if (mode === "move" && this.selectedIds.size > 1) {

@@ -64,43 +64,47 @@
   onMount(() => {
     if (!container) return;
 
-    controller = new WaveformController(container, {
-      onRegionChange: (e) => onRegionChange(e),
-      onUserInteraction: () => {
-        aiResult = null;
-        contextMenu = null;
-        noteContextMenu = null;
-      },
-      onShowContextMenu: (e, id) => {
-        const panelRect = panelEl?.getBoundingClientRect();
-        if (!panelRect) {
-          contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
-          return;
-        }
+    controller = new WaveformController(
+      container,
+      {
+        onRegionChange: (e) => onRegionChange(e),
+        onUserInteraction: () => {
+          aiResult = null;
+          contextMenu = null;
+          noteContextMenu = null;
+        },
+        onShowContextMenu: (e, id) => {
+          const panelRect = panelEl?.getBoundingClientRect();
+          if (!panelRect) {
+            contextMenu = { x: e.clientX, y: e.clientY, regionId: id };
+            return;
+          }
 
-        contextMenu = {
-          x: e.clientX - panelRect.left,
-          y: e.clientY - panelRect.top,
-          regionId: id,
-        };
-      },
-      onEditRegion: (id) => startEditing(id),
-      onNoteChange: (e) => onNoteChange(e),
-      onEditNote: (id) => startEditingNote(id),
-      onShowNoteContextMenu: (e, id) => {
-        const panelRect = panelEl?.getBoundingClientRect();
-        if (!panelRect) {
-          noteContextMenu = { x: e.clientX, y: e.clientY, noteId: id };
-          return;
-        }
+          contextMenu = {
+            x: e.clientX - panelRect.left,
+            y: e.clientY - panelRect.top,
+            regionId: id,
+          };
+        },
+        onEditRegion: (id) => startEditing(id),
+        onNoteChange: (e) => onNoteChange(e),
+        onEditNote: (id) => startEditingNote(id),
+        onShowNoteContextMenu: (e, id) => {
+          const panelRect = panelEl?.getBoundingClientRect();
+          if (!panelRect) {
+            noteContextMenu = { x: e.clientX, y: e.clientY, noteId: id };
+            return;
+          }
 
-        noteContextMenu = {
-          x: e.clientX - panelRect.left,
-          y: e.clientY - panelRect.top,
-          noteId: id,
-        };
+          noteContextMenu = {
+            x: e.clientX - panelRect.left,
+            y: e.clientY - panelRect.top,
+            noteId: id,
+          };
+        },
       },
-    }, { initialZoom, initialChordLength });
+      { initialZoom, initialChordLength },
+    );
 
     const unsubscribeScroll = controller.onScrollStateChange((state) => {
       scrollPosition = state.position;
@@ -131,7 +135,8 @@
       if (!hasAppliedInitialViewState) {
         hasAppliedInitialViewState = true;
         if (initialZoom !== undefined) controller.setZoom(initialZoom);
-        if (initialScrollPosition) controller.setScrollPosition(initialScrollPosition);
+        if (initialScrollPosition)
+          controller.setScrollPosition(initialScrollPosition);
       }
       onReady?.();
     }
@@ -155,8 +160,10 @@
   };
   export const setSynthVolume = (v: number) => controller?.setSynthVolume(v);
   export const setTrackVolume = (v: number) => controller?.setTrackVolume(v);
-  export const setSynthMuted = (muted: boolean) => controller?.setSynthMuted(muted);
-  export const setTrackMuted = (muted: boolean) => controller?.setTrackMuted(muted);
+  export const setSynthMuted = (muted: boolean) =>
+    controller?.setSynthMuted(muted);
+  export const setTrackMuted = (muted: boolean) =>
+    controller?.setTrackMuted(muted);
   export const setOscillator = (t: string) => controller?.setOscillator(t);
   export const setDefaultChordLength = (v: number) =>
     controller?.setDefaultChordLength(v);
@@ -191,7 +198,10 @@
 
   function autofocus(node: HTMLElement) {
     node.focus();
-    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+    if (
+      node instanceof HTMLInputElement ||
+      node instanceof HTMLTextAreaElement
+    ) {
       node.select();
     }
   }
@@ -277,7 +287,10 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<div bind:this={panelEl} class="relative w-full panel panel-muted flex flex-col gap-3">
+<div
+  bind:this={panelEl}
+  class="relative w-full panel panel-muted flex flex-col gap-3"
+>
   <div class="relative w-full min-h-[128px]">
     <div bind:this={container} class="w-full min-h-[128px]"></div>
     {#if audioUrl && !controller?.isReady}
@@ -290,7 +303,9 @@
 
   <div class="waveform-controls">
     <div class="control-row control-row-scroll">
-      <span class="timeline-time">{formatTime(controller?.currentTime ?? 0)}</span>
+      <span class="timeline-time"
+        >{formatTime(controller?.currentTime ?? 0)}</span
+      >
       <input
         type="range"
         min="0"
@@ -353,7 +368,9 @@
     <div class="modal-card compact">
       <div class="modal-header">
         <h3 class="modal-title"><Pencil size={16} /> Edit Chord Region</h3>
-        <button class="close-ghost" onclick={closeEditor}><X size={16} /></button>
+        <button class="close-ghost" onclick={closeEditor}
+          ><X size={16} /></button
+        >
       </div>
 
       <div class="field-group">
@@ -398,7 +415,10 @@
         />
       </div>
 
-      <div class="action-row" style="margin-top: 1rem; justify-content: flex-end;">
+      <div
+        class="action-row"
+        style="margin-top: 1rem; justify-content: flex-end;"
+      >
         <button class="btn btn-outline" onclick={closeEditor}>Cancel</button>
         <button class="btn btn-primary" onclick={saveEdit}>Save</button>
       </div>
@@ -415,7 +435,9 @@
     <div class="modal-card compact">
       <div class="modal-header">
         <h3 class="modal-title"><StickyNote size={16} /> Edit Note</h3>
-        <button class="close-ghost" onclick={closeNoteEditor}><X size={16} /></button>
+        <button class="close-ghost" onclick={closeNoteEditor}
+          ><X size={16} /></button
+        >
       </div>
 
       <div class="field-group">
@@ -426,14 +448,14 @@
           bind:value={noteEditState.text}
           class="input-field note-textarea"
           placeholder="Enter a note"
-          rows="6"
-        ></textarea>
+          rows="6"></textarea>
       </div>
 
       <div
         style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;"
       >
-        <button class="btn btn-outline" onclick={closeNoteEditor}>Cancel</button>
+        <button class="btn btn-outline" onclick={closeNoteEditor}>Cancel</button
+        >
         <button class="btn btn-primary" onclick={saveNoteEdit}>Save</button>
       </div>
     </div>

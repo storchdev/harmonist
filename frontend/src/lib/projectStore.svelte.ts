@@ -152,7 +152,7 @@ export class ProjectStore {
         octave: r.octave ?? existing?.octave ?? 4,
         comment:
           r.comment !== undefined
-            ? (trimmedComment || undefined)
+            ? trimmedComment || undefined
             : existing?.comment,
       };
 
