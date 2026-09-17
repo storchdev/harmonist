@@ -302,7 +302,7 @@ export class WaveformController {
   }
 
   selectNeighborRegion(direction: number) {
-    this.regions.selectNeighbor(direction);
+    this.regions.selectNeighbor(direction, this.ws.getCurrentTime());
     this.scrollSelectedIntoView();
   }
 

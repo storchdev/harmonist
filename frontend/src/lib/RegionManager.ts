@@ -514,13 +514,13 @@ export class RegionManager {
     return this.wsRegions.getRegions();
   }
 
-  public selectNeighbor(direction: number) {
+  public selectNeighbor(direction: number, currentTime?: number) {
     const sorted = this.getAll().sort((a, b) => a.start - b.start);
     if (sorted.length === 0) return;
 
     const idx = sorted.findIndex((r) => r.id === this.selectedRegionId);
     if (idx === -1) {
-      const t = this.playheadTime;
+      const t = currentTime ?? this.playheadTime;
       const closest = sorted.reduce((best, r) => {
         const center = (r.start + r.end) / 2;
         const bestCenter = (best.start + best.end) / 2;
