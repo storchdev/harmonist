@@ -48,6 +48,27 @@ frontend/src/
 - Every saved chord must have a detectable tonic (root note); qualities
   without roots (e.g. "5", "maj7") are rejected. Slash chords (`X/Y`) are
   valid only if `X` is a valid chord and `Y` is a valid note.
+- **Persisted view-state (zoom/scroll position) is a feedback-loop
+  minefield — see `Waveform.svelte`'s `currentZoom`/`scrollPosition` vs.
+  `lastReportedZoom`/`lastReportedScrollPosition`.** Two traps stacked on
+  each other here and each is easy to reintroduce in isolation:
+  1. Don't let the effect that reloads/re-decodes audio (`controller.load`)
+     read the *saved* value (`initialZoom`/settings prop) as a reactive
+     dependency. Writing that value back on every zoom/scroll tick
+     mutates the same settings object the effect reads, retriggering a
+     full reload, which re-applies the initial zoom, which fires another
+     "zoom" event, ad infinitum — the zoom value would race to its max
+     clamp and get persisted as the new "saved" state. Key the reload
+     effect on the audio URL/project id only.
+  2. Applying a restored value programmatically (`controller.setZoom()`)
+     fires the *same* WaveSurfer event as a live user change. To dirty
+     the project on real user changes without also dirtying it on every
+     restore/redraw, track "last value reported to the parent"
+     separately from the UI-bound display value (e.g. a range input's
+     `bind:value`) — comparing against the UI-bound value is wrong either
+     way: it updates optimistically before the echo event, so it can mask
+     genuine user-driven changes, and it isn't set at restore time, so it
+     can also flag a plain reload as a change.
 
 ### Audio engine
 
